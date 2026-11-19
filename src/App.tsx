@@ -15,6 +15,7 @@ import {
   IdCard,
   Search,
   X,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from './auth/AuthContext'
 import { useSearch } from './search/SearchContext'
@@ -29,6 +30,20 @@ import Trips from './pages/Trips'
 import TripCreate from './pages/TripCreate'
 import TripDetail from './pages/TripDetail'
 import DriverTrip from './pages/DriverTrip'
+
+/**
+ * Items del menu: se renderizan en la barra LATERAL (escritorio,
+ * >= 900px) y en la barra INFERIOR (movil), con los mismos links.
+ * Sucursales queda oculto: se entra escribiendo /sucursales
+ * (protegido con TOTP en TotpGate).
+ */
+const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
+  { to: '/', label: 'Dashboard', icon: House, end: true },
+  { to: '/planificacion', label: 'Plan', icon: CalendarDays },
+  { to: '/viajes', label: 'Viajes', icon: Bus },
+  { to: '/vehiculos', label: 'Vehículos', icon: Car },
+  { to: '/choferes', label: 'Choferes', icon: IdCard },
+]
 
 function Protected({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -63,8 +78,36 @@ function Shell({ children }: { children: ReactNode }) {
     navigate('/login', { replace: true })
   }
 
+  // Mismo listado para el menu lateral y el inferior
+  const navLinks = NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={end}
+      className={({ isActive }) => (isActive ? 'active' : '')}
+    >
+      <span className="nav-icon">
+        <Icon size={20} />
+      </span>
+      {label}
+    </NavLink>
+  ))
+
   return (
     <div className="app">
+      {/* Menu lateral: visible solo en escritorio (>= 900px) */}
+      <nav className="sidenav" aria-label="Menú principal">
+        <span className="brand">
+          <img
+            src="/logo-white.webp"
+            alt="LOGIXLITE"
+            className="brand-logo brand-logo-white"
+          />
+          LOGIXLITE
+        </span>
+        {navLinks}
+      </nav>
+
       <header className="topbar">
         <span className="brand">
           <img
@@ -113,43 +156,8 @@ function Shell({ children }: { children: ReactNode }) {
 
       <main className="content">{children}</main>
 
-      <nav className="bottomnav">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">
-            <House size={20} />
-          </span>
-          Dashboard
-        </NavLink>
-        <NavLink
-          to="/planificacion"
-          className={({ isActive }) => (isActive ? 'active' : '')}
-        >
-          <span className="nav-icon">
-            <CalendarDays size={20} />
-          </span>
-          Plan
-        </NavLink>
-        <NavLink to="/viajes" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">
-            <Bus size={20} />
-          </span>
-          Viajes
-        </NavLink>
-        <NavLink to="/vehiculos" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">
-            <Car size={20} />
-          </span>
-          Vehículos
-        </NavLink>
-        <NavLink to="/choferes" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">
-            <IdCard size={20} />
-          </span>
-          Choferes
-        </NavLink>
-        {/* Sucursales oculto del menú: se entra escribiendo /sucursales
-            (protegido con TOTP en TotpGate) */}
-      </nav>
+      {/* Barra inferior: visible solo en movil */}
+      <nav className="bottomnav">{navLinks}</nav>
     </div>
   )
 }

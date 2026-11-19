@@ -281,6 +281,89 @@ code {
   justify-content: center;
 }
 
+/* ===== Menu lateral (solo escritorio, >= 900px) =====
+   En movil se mantiene la barra inferior flotante (.bottomnav). */
+.sidenav {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  /* El topbar y el contenido se corren a la derecha de la barra */
+  .app {
+    padding-left: 216px;
+  }
+
+  .sidenav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 216px;
+    z-index: 30;
+    background: #0f172a;
+    color: #fff;
+    padding: 0.7rem;
+    overflow-y: auto;
+  }
+
+  .sidenav .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0.35rem 0.9rem;
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .sidenav a {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 10px;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .sidenav a:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .sidenav a.active {
+    background: rgba(37, 99, 235, 0.35);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* En escritorio el menu es lateral: la barra inferior no aplica */
+  .bottomnav {
+    display: none;
+  }
+
+  .content {
+    padding-bottom: 2rem;
+  }
+
+  /* El logo vive en la barra lateral; arriba quedan el buscador
+     centrado y la sesion a la derecha */
+  .topbar {
+    justify-content: flex-end;
+  }
+
+  .topbar .brand {
+    display: none;
+  }
+}
+
 .page {
   padding: 1rem;
 }
