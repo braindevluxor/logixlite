@@ -367,7 +367,8 @@ code {
     width: 52px;
     height: 48px;
     border-radius: 13px;
-    color: var(--muted);
+    /* Mismo color que la barra superior (#0f172a) */
+    color: var(--text);
     transition:
       background 0.15s,
       color 0.15s;
@@ -377,9 +378,11 @@ code {
     background: var(--bg);
   }
 
+  /* Activo: invierte como la barra superior (fondo oscuro,
+     icono en blanco) */
   .sidenav a.active {
-    color: var(--primary);
-    background: #eff6ff;
+    background: #0f172a;
+    color: #fff;
   }
 
   /* ===== Etiqueta emergente al pasar el mouse =====
