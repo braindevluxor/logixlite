@@ -9,7 +9,6 @@ import {
   Pencil,
   Send,
   Share2,
-  X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type {
@@ -63,10 +62,6 @@ export default function TripDetail() {
   const [incidents, setIncidents] = useState<IncidentRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-
-  // Avisos a pasajeros (WhatsApp)
-  const [notifyOpen, setNotifyOpen] = useState(false)
-  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const [t, p, d, i] = await Promise.all([
@@ -269,16 +264,6 @@ export default function TripDetail() {
     return `${base}?text=${encodeURIComponent(msg)}`
   }
 
-  async function copyMsg(p: TripPassenger) {
-    try {
-      await navigator.clipboard.writeText(passengerMessage(p))
-      setCopiedId(p.id)
-      window.setTimeout(() => setCopiedId(null), 2000)
-    } catch {
-      setError('No se pudo copiar el mensaje')
-    }
-  }
-
   return (
     <div className="page">
       <div className="page-head">
@@ -354,27 +339,6 @@ export default function TripDetail() {
               : 'Este viaje no tiene link (falta regenerar share_token).'}
           </p>
         </div>
-
-        {trip.status === 'programado' && passengers.length > 0 && (
-          <div className="share-box">
-            <div className="row spread wrap gap-sm">
-              <strong className="share-title">
-                <Send size={16} /> Avisar a los pasajeros
-              </strong>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                onClick={() => setNotifyOpen(true)}
-              >
-                Abrir avisos
-              </button>
-            </div>
-            <p className="muted small" style={{ margin: '0.4rem 0 0' }}>
-              Genera el mensaje de cada pasajero (origen, destinos, fecha, vehículo y
-              conductor) listo para enviar por WhatsApp.
-            </p>
-          </div>
-        )}
 
         <div className="row gap wrap">
           {trip.status === 'programado' && (
@@ -519,6 +483,22 @@ export default function TripDetail() {
                       )}
                     </div>
                   </div>
+
+                  {trip.status === 'programado' && (
+                    <a
+                      className="btn btn-sm btn-primary notify-btn"
+                      href={waUrl(passengerMessage(p), p.phone)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={
+                        p.phone
+                          ? `WhatsApp de ${p.full_name}`
+                          : 'Abrir WhatsApp (sin teléfono: elige el contacto)'
+                      }
+                    >
+                      <Send size={14} /> Notificar
+                    </a>
+                  )}
                 </div>
               </li>
             )
@@ -553,83 +533,6 @@ export default function TripDetail() {
             </li>
           ))}
         </ul>
-      )}
-
-      {/* ===== Modal: avisar a los pasajeros ===== */}
-      {notifyOpen && (
-        <div className="modal-backdrop" onClick={() => setNotifyOpen(false)}>
-          <div
-            className="card modal modal-wide"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Avisar a los pasajeros"
-          >
-            <div className="modal-head">
-              <div>
-                <h2>
-                  <Send size={18} /> Avisar a los pasajeros
-                </h2>
-                <p className="muted small">
-                  Si el pasajero tiene teléfono, WhatsApp se abre directo en su
-                  chat; si no, se abre el selector de contactos.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setNotifyOpen(false)}
-                aria-label="Cerrar"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            <div className="notify-list">
-              {passengers.map((p) => {
-                const msg = passengerMessage(p)
-                return (
-                  <div key={p.id} className="notify-row">
-                    <div className="notify-main">
-                      <strong>{p.full_name}</strong>
-                      <span className="muted small notify-sub">
-                        C.I. {p.dni}
-                        {p.phone ? ` · ${p.phone}` : ' · sin teléfono'}
-                      </span>
-                      <pre className="notify-msg">{msg}</pre>
-                    </div>
-                    <div className="notify-actions">
-                      <button
-                        type="button"
-                        className="btn btn-sm"
-                        onClick={() => copyMsg(p)}
-                        title="Copiar el mensaje"
-                      >
-                        {copiedId === p.id ? (
-                          <>
-                            <Check size={14} /> Copiado
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={14} /> Copiar
-                          </>
-                        )}
-                      </button>
-                      <a
-                        className="btn btn-sm btn-primary"
-                        href={waUrl(msg, p.phone)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Send size={14} /> WhatsApp
-                      </a>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ===== Modal: cancelar con motivo ===== */}
