@@ -1238,6 +1238,59 @@ code {
   margin-top: 0.7rem;
 }
 
+/* ===== Gate TOTP (acceso restringido) ===== */
+.totp-gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 1rem;
+}
+
+.totp-card {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.totp-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: var(--primary);
+  margin-bottom: 0.6rem;
+}
+
+.totp-card h1 {
+  font-size: 1.2rem;
+  margin: 0 0 0.4rem;
+}
+
+.totp-card p {
+  font-size: 0.87rem;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.totp-input {
+  text-align: center;
+  font-size: 1.7rem !important;
+  letter-spacing: 0.55rem;
+  font-weight: 700;
+  padding-left: calc(0.55rem + 0.7rem) !important;
+}
+
+.totp-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
 /* ===== Modal de llegada: GPS + KM ===== */
 .geo-box {
   display: flex;

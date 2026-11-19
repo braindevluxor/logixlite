@@ -307,11 +307,14 @@ export default function TripDetail() {
               Finalizar
             </button>
           )}
-          {(trip.status === 'finalizado' || trip.status === 'cancelado') && (
-            <button className="btn btn-danger" disabled={busy} onClick={onDelete}>
-              Eliminar viaje
-            </button>
-          )}
+          <button
+            className="btn btn-danger"
+            disabled={busy}
+            onClick={onDelete}
+            title="Eliminar este viaje (cualquier estado)"
+          >
+            Eliminar viaje
+          </button>
         </div>
       </div>
 

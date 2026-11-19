@@ -1,13 +1,19 @@
-import { Navigate, Route, Routes, NavLink, useNavigate } from 'react-router-dom'
+import {
+  Navigate,
+  Route,
+  Routes,
+  NavLink,
+  useNavigate,
+} from 'react-router-dom'
 import type { ReactNode } from 'react'
 import {
   Bus,
-  Building,
   Car,
   House,
   IdCard,
 } from 'lucide-react'
 import { useAuth } from './auth/AuthContext'
+import TotpGate from './auth/TotpGate'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
@@ -76,12 +82,8 @@ function Shell({ children }: { children: ReactNode }) {
           </span>
           Choferes
         </NavLink>
-        <NavLink to="/sucursales" className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">
-            <Building size={20} />
-          </span>
-          Sucursales
-        </NavLink>
+        {/* Sucursales oculto del menú: se entra escribiendo /sucursales
+            (protegido con TOTP en TotpGate) */}
       </nav>
     </div>
   )
@@ -128,9 +130,11 @@ export default function App() {
         path="/sucursales"
         element={
           <Protected>
-            <Shell>
-              <Branches />
-            </Shell>
+            <TotpGate>
+              <Shell>
+                <Branches />
+              </Shell>
+            </TotpGate>
           </Protected>
         }
       />

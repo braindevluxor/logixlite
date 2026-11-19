@@ -11,3 +11,7 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient(url ?? '', anonKey ?? '')
+
+/** URL y anon key del proyecto (para Edge Functions) */
+export const SUPABASE_URL = url ?? ''
+export const SUPABASE_ANON_KEY = anonKey ?? ''
