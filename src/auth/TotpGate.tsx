@@ -55,7 +55,10 @@ export default function TotpGate({ children }: { children: ReactNode }) {
         setCode('')
       }
     } catch {
-      setError('No se pudo verificar. Revisa tu conexión e inténtalo de nuevo.')
+      setError(
+        'No se pudo contactar con el servidor. La función totp-verify casi seguro no está desplegada todavía (supabase functions deploy totp-verify), o no hay conexión.'
+      )
+      setCode('')
     } finally {
       setBusy(false)
     }
