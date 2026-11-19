@@ -2083,6 +2083,102 @@ code {
   white-space: nowrap;
 }
 
+/* ===== Ultimo KM + proximo cambio de aceite ===== */
+.veh-km {
+  margin-top: 0.45rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.veh-km-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.veh-km-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.veh-km-title svg {
+  flex-shrink: 0;
+}
+
+.veh-km-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.veh-km-value {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.veh-km-date {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.km-track {
+  display: block;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.km-fill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 999px;
+  transition: width 0.3s;
+}
+
+.veh-km-oil {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.km-ok {
+  color: var(--ok);
+}
+
+.km-warn {
+  color: var(--warn);
+}
+
+.km-danger {
+  color: var(--danger);
+}
+
+.km-fill.km-ok {
+  background: var(--ok);
+}
+
+.km-fill.km-warn {
+  background: var(--warn);
+}
+
+.km-fill.km-danger {
+  background: var(--danger);
+}
+
 .veh-actions {
   display: flex;
   gap: 0.4rem;

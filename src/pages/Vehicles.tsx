@@ -1,9 +1,30 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Camera, Car, Pencil, Plus, Search, Trash2, UserRound, X } from 'lucide-react'
+import {
+  Camera,
+  Car,
+  Gauge,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { removeVehiclePhoto, uploadVehiclePhoto, vehiclePhotoUrl } from '../lib/photos'
 import { useSearch } from '../search/SearchContext'
 import type { Driver, Vehicle, VehicleStatus } from '../lib/types'
+
+/** Cada cuantos KM se le debe hacer el cambio de aceite */
+const OIL_CHANGE_KM = 5000
+
+/** Fila devuelta al buscar el ultimo KM de un vehiculo */
+type KmRow = {
+  km: number | string
+  arrived_at: string | null
+}
+
+type KmInfo = { km: number; at: string | null }
 
 const EMPTY: Partial<Vehicle> = {
   plate: '',
@@ -28,6 +49,8 @@ export default function Vehicles() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Ultimo KM registrado por vehiculo (id -> km y fecha) */
+  const [lastKm, setLastKm] = useState<Record<number, KmInfo>>({})
 
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -49,9 +72,32 @@ export default function Vehicles() {
       supabase.from('vehicles').select('*').order('plate', { ascending: true }),
       supabase.from('drivers').select('*').order('full_name', { ascending: true }),
     ])
+    const vehicles = (v.data as Vehicle[]) ?? []
     if (v.error) setError(v.error.message)
-    else setItems((v.data as Vehicle[]) ?? [])
+    else setItems(vehicles)
     if (!d.error) setDrivers((d.data as Driver[]) ?? [])
+
+    // Ultimo KM registrado por vehiculo: una consulta por vehiculo
+    // con limit 1 (el odometro es creciente, la llegada mas
+    // reciente trae el KM mas alto)
+    const kmEntries = await Promise.all(
+      vehicles.map(async (veh) => {
+        const { data } = await supabase
+          .from('trip_passenger_destinations')
+          .select('km, arrived_at, trip_passengers!inner(trip_id, trips!inner(vehicle_id))')
+          .eq('trip_passengers.trips.vehicle_id', veh.id)
+          .not('km', 'is', null)
+          .order('arrived_at', { ascending: false })
+          .limit(1)
+        const row = (data as unknown as KmRow[] | null)?.[0]
+        if (!row || row.km == null) return null
+        return [veh.id, { km: Number(row.km), at: row.arrived_at }] as const
+      })
+    )
+    const kmMap: Record<number, KmInfo> = {}
+    for (const e of kmEntries) if (e) kmMap[e[0]] = e[1]
+    setLastKm(kmMap)
+
     setLoading(false)
   }
 
@@ -195,6 +241,23 @@ export default function Vehicles() {
   const driverName = (id: number | null) =>
     id ? (drivers.find((d) => d.id === id)?.full_name ?? null) : null
 
+  const fmtKm = (n: number) => Math.round(n).toLocaleString('es-VE')
+
+  /**
+   * Progreso hacia el proximo cambio de aceite (cada 5000 KM):
+   * cuenta desde el ultimo multiplo de 5000 del odometro.
+   */
+  function oilInfo(km: number) {
+    const since = km % OIL_CHANGE_KM // KM desde el ultimo cambio
+    const remaining = OIL_CHANGE_KM - since
+    const pct = (since / OIL_CHANGE_KM) * 100
+    if (km > 0 && since === 0) {
+      return { pct: 100, tone: 'danger', text: 'Cambio de aceite pendiente' }
+    }
+    const tone = remaining <= 500 ? 'warn' : 'ok'
+    return { pct, tone, text: `Cambio de aceite en ${fmtKm(remaining)} KM` }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -251,6 +314,8 @@ export default function Vehicles() {
           {filtered.map((v) => {
             const photo = vehiclePhotoUrl(v.photo_path)
             const driver = driverName(v.default_driver_id)
+            const kmInfo = lastKm[v.id]
+            const oil = kmInfo ? oilInfo(kmInfo.km) : null
             return (
               <article key={v.id} className="veh-card">
                 <div className="veh-photo">
@@ -277,6 +342,45 @@ export default function Vehicles() {
                       <span className="veh-driver">
                         <UserRound size={12} /> {driver}
                       </span>
+                    )}
+                  </div>
+
+                  {/* Ultimo KM registrado + proximo cambio de aceite */}
+                  <div className="veh-km">
+                    <div className="veh-km-top">
+                      <span className="veh-km-title">
+                        <Gauge size={13} /> Último KM
+                      </span>
+                      <span className="veh-km-right">
+                        {kmInfo ? (
+                          <>
+                            <strong className="veh-km-value">
+                              {fmtKm(kmInfo.km)} KM
+                            </strong>
+                            {kmInfo.at && (
+                              <span className="veh-km-date">
+                                {new Date(kmInfo.at).toLocaleDateString('es-VE', {
+                                  dateStyle: 'short',
+                                })}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="veh-km-date">Sin registro</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {kmInfo && oil && (
+                      <>
+                        <span className="km-track">
+                          <span
+                            className={`km-fill km-${oil.tone}`}
+                            style={{ width: `${oil.pct}%` }}
+                          />
+                        </span>
+                        <span className={`veh-km-oil km-${oil.tone}`}>{oil.text}</span>
+                      </>
                     )}
                   </div>
 
