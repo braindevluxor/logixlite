@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Plus } from 'lucide-react'
+import {
+  ArrowRight,
+  Calendar,
+  CircleCheck,
+  Clock,
+  Plus,
+  RotateCcw,
+  Route,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { TripStatus } from '../lib/types'
 
@@ -46,6 +54,22 @@ function startOfMonthISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`
 }
 
+function daysAgoISO(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return localISO(d)
+}
+
+function longDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('es-VE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 // ===== Dona de traslados por departamento (SVG a mano) =====
 function Donut({
   data,
@@ -72,9 +96,14 @@ function Donut({
 
   return (
     <div className="donut-wrap">
-      <svg viewBox="0 0 200 200" className="donut" role="img" aria-label="Traslados por departamento">
+      <svg
+        viewBox="0 0 200 200"
+        className="donut"
+        role="img"
+        aria-label="Traslados por departamento"
+      >
         <g transform="rotate(-90 100 100)">
-          <circle cx="100" cy="100" r={R} fill="none" stroke="#e2e8f0" strokeWidth="26" />
+          <circle cx="100" cy="100" r={R} fill="none" stroke="#eef2f7" strokeWidth="26" />
           {slices.map((s) => (
             <circle
               key={s.idx}
@@ -83,7 +112,7 @@ function Donut({
               r={R}
               fill="none"
               stroke={s.color}
-              strokeWidth={hover === s.idx ? 32 : 26}
+              strokeWidth={hover === s.idx ? 33 : 26}
               strokeDasharray={`${s.dash} ${C - s.dash}`}
               strokeDashoffset={-s.acc}
               onMouseEnter={() => setHover(s.idx)}
@@ -92,14 +121,14 @@ function Donut({
             />
           ))}
         </g>
-        <text x="100" y="94" textAnchor="middle" className="donut-center-num">
+        <text x="100" y="92" textAnchor="middle" className="donut-center-num">
           {active ? active.count : total}
         </text>
-        <text x="100" y="116" textAnchor="middle" className="donut-center-label">
-          {active ? 'traslados' : 'traslados totales'}
+        <text x="100" y="114" textAnchor="middle" className="donut-center-label">
+          {active ? 'traslados' : 'traslados'}
         </text>
         {active && (
-          <text x="100" y="136" textAnchor="middle" className="donut-center-dept">
+          <text x="100" y="135" textAnchor="middle" className="donut-center-dept">
             {active.name.length > 22 ? active.name.slice(0, 21) + '…' : active.name}
           </text>
         )}
@@ -214,101 +243,195 @@ export default function Dashboard() {
     [passengers]
   )
 
+  const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0)
+
+  // Rangos rápidos activos
+  const today = localISO(new Date())
+  const quickRanges = [
+    { label: 'Hoy', from: today, to: today },
+    { label: '7 días', from: daysAgoISO(6), to: today },
+    { label: 'Este mes', from: startOfMonthISO(), to: today },
+  ]
+  const activeQuick = quickRanges.find((r) => r.from === from && r.to === to)?.label ?? null
+
   return (
-    <div className="page">
-      <div className="page-head">
-        <h1>Dashboard</h1>
-        <Link className="btn btn-primary" to="/viajes/nuevo">
-          <Plus size={15} /> Nuevo viaje
+    <div className="page dash">
+      {/* ---- Hero ---- */}
+      <div className="dash-hero">
+        <div className="dash-hero-text">
+          <h1>Dashboard</h1>
+          <p className="dash-hero-date">{longDate(today)}</p>
+        </div>
+        <Link className="btn btn-hero" to="/viajes/nuevo">
+          <Plus size={16} /> Nuevo viaje
         </Link>
       </div>
 
       {/* ---- Filtro de fechas ---- */}
       <div className="card date-filter">
-        <Calendar size={17} className="date-filter-icon" />
-        <label className="field">
-          <span>Desde</span>
-          <input
-            type="date"
-            value={from}
-            max={to}
-            onChange={(e) => e.target.value && setFrom(e.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>Hasta</span>
-          <input
-            type="date"
-            value={to}
-            min={from}
-            onChange={(e) => e.target.value && setTo(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => {
-            setFrom(startOfMonthISO())
-            setTo(localISO(new Date()))
-          }}
-        >
-          Este mes
-        </button>
+        <div className="date-quick">
+          <Calendar size={16} className="date-filter-icon" />
+          {quickRanges.map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              className={`pill ${activeQuick === r.label ? 'active' : ''}`}
+              onClick={() => {
+                setFrom(r.from)
+                setTo(r.to)
+              }}
+            >
+              {r.label}
+            </button>
+          ))}
+          {activeQuick && (
+            <button
+              type="button"
+              className="pill pill-reset"
+              onClick={() => {
+                setFrom(startOfMonthISO())
+                setTo(localISO(new Date()))
+              }}
+              title="Restablecer"
+            >
+              <RotateCcw size={13} />
+            </button>
+          )}
+        </div>
+
+        <div className="date-inputs">
+          <label className="field">
+            <span>Desde</span>
+            <input
+              type="date"
+              value={from}
+              max={to}
+              onChange={(e) => e.target.value && setFrom(e.target.value)}
+            />
+          </label>
+          <span className="date-sep">→</span>
+          <label className="field">
+            <span>Hasta</span>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              onChange={(e) => e.target.value && setTo(e.target.value)}
+            />
+          </label>
+        </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <p className="muted">Cargando…</p>
+        <div className="stat-grid">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card stat-card skeleton">
+              <span className="sk-chip" />
+              <span className="sk-line wide" />
+              <span className="sk-line" />
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           {/* ---- Totales ---- */}
           <div className="stat-grid">
-            <div className="card stat">
-              <span className="stat-num stat-ok">{stats.listos}</span>
-              <span className="stat-label">Viajes listos</span>
-              <span className="muted small">finalizados</span>
-            </div>
-            <div className="card stat">
-              <span className="stat-num stat-pend">{stats.pendientes}</span>
-              <span className="stat-label">Viajes pendientes</span>
-              <span className="muted small">programados + en curso</span>
-            </div>
-            <div className="card stat">
-              <span className="stat-num">{stats.total}</span>
-              <span className="stat-label">Total en el periodo</span>
-              <span className="muted small">
-                {stats.cancelados > 0 ? `${stats.cancelados} cancelado(s)` : 'sin cancelados'}
+            <div className="card stat-card stat-ok">
+              <span className="stat-icon stat-icon-ok">
+                <CircleCheck size={20} />
               </span>
+              <div className="stat-body">
+                <span className="stat-num">{stats.listos}</span>
+                <span className="stat-label">Viajes listos</span>
+                <div className="mini-bar">
+                  <div className="mini-fill ok" style={{ width: `${pct(stats.listos)}%` }} />
+                </div>
+                <span className="muted small">
+                  {pct(stats.listos)}% del total
+                  {stats.cancelados > 0 ? ` · ${stats.cancelados} cancelado(s)` : ''}
+                </span>
+              </div>
+            </div>
+
+            <div className="card stat-card stat-pend">
+              <span className="stat-icon stat-icon-pend">
+                <Clock size={20} />
+              </span>
+              <div className="stat-body">
+                <span className="stat-num">{stats.pendientes}</span>
+                <span className="stat-label">Viajes pendientes</span>
+                <div className="mini-bar">
+                  <div className="mini-fill pend" style={{ width: `${pct(stats.pendientes)}%` }} />
+                </div>
+                <span className="muted small">
+                  {pct(stats.pendientes)}% · programados + en curso
+                </span>
+              </div>
+            </div>
+
+            <div className="card stat-card stat-total">
+              <span className="stat-icon stat-icon-total">
+                <Route size={20} />
+              </span>
+              <div className="stat-body">
+                <span className="stat-num">{stats.total}</span>
+                <span className="stat-label">Total en el periodo</span>
+                <div className="mini-bar">
+                  <div className="mini-fill total" style={{ width: '100%' }} />
+                </div>
+                <span className="muted small">
+                  {from} → {to}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* ---- Gráfico de torta ---- */}
-          <h2>Departamentos con más traslados</h2>
-          <p className="muted small chart-sub">
-            {from} → {to} · {totalTraslados} traslado(s) en {totalDepts} departamento(s)
-          </p>
-
-          {totalTraslados === 0 ? (
-            <div className="card">
-              <p className="muted">No hay pasajeros en el rango de fechas seleccionado.</p>
+          <div className="card chart-card">
+            <div className="chart-head">
+              <div>
+                <h2 className="chart-title">Departamentos con más traslados</h2>
+                <p className="chart-sub">
+                  {totalTraslados} traslado(s) · {totalDepts} departamento(s)
+                </p>
+              </div>
+              <span className="chart-badge">
+                <ArrowRight size={13} /> {from} → {to}
+              </span>
             </div>
-          ) : (
-            <div className="card chart-card">
+
+            {totalTraslados === 0 ? (
+              <div className="chart-empty">
+                <Route size={28} />
+                <p>No hay pasajeros en el rango de fechas seleccionado.</p>
+              </div>
+            ) : (
               <div className="chart-grid">
                 <Donut data={topDepts} total={totalTraslados} />
                 <ul className="chart-legend">
-                  {topDepts.map((d) => (
-                    <li key={d.name}>
-                      <span className="legend-dot" style={{ background: d.color }} />
-                      <span className="legend-name">{d.name}</span>
-                      <strong className="legend-count">{d.count}</strong>
-                    </li>
-                  ))}
+                  {topDepts.map((d) => {
+                    const p = Math.round((d.count / totalTraslados) * 100)
+                    return (
+                      <li key={d.name}>
+                        <span className="legend-dot" style={{ background: d.color }} />
+                        <span className="legend-name">{d.name}</span>
+                        <span className="legend-pct">{p}%</span>
+                        <span className="legend-track">
+                          <span
+                            className="legend-fill"
+                            style={{ width: `${p}%`, background: d.color }}
+                          />
+                        </span>
+                        <strong className="legend-count">{d.count}</strong>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>

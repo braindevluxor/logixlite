@@ -195,42 +195,121 @@ code {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.85rem;
   margin-bottom: 1rem;
 }
 
-.stat {
-  text-align: center;
+/* ===== Tarjetas de estadísticas (Dashboard) ===== */
+.stat-card {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem 1.05rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+}
+
+.stat-card.stat-ok::after {
+  background: var(--ok);
+}
+.stat-card.stat-pend::after {
+  background: var(--warn);
+}
+.stat-card.stat-total::after {
+  background: var(--primary);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.stat-icon-ok {
+  background: #dcfce7;
+  color: var(--ok);
+}
+.stat-icon-pend {
+  background: #fef3c7;
+  color: var(--warn);
+}
+.stat-icon-total {
+  background: #dbeafe;
+  color: var(--primary);
+}
+
+.stat-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .stat-num {
   display: block;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
-.stat-ok {
+.stat-ok .stat-num {
   color: var(--ok);
 }
-
-.stat-pend {
+.stat-pend .stat-num {
   color: var(--warn);
+}
+.stat-total .stat-num {
+  color: var(--primary);
 }
 
 .stat-label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
 }
 
-.stat .muted.small {
+.stat-card .muted.small {
   display: block;
-  margin-top: 0.1rem;
-  line-height: 1.3;
+  margin-top: 0.35rem;
+  line-height: 1.35;
+  font-size: 0.74rem;
+}
+
+/* Barra de progreso mini en las tarjetas */
+.mini-bar {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.mini-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.mini-fill.ok {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+.mini-fill.pend {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.mini-fill.total {
+  background: linear-gradient(90deg, var(--primary), #38bdf8);
 }
 
 .btn {
@@ -1234,41 +1313,196 @@ code {
   box-shadow: var(--shadow);
 }
 
+/* ===== Dashboard: hero ===== */
+.dash-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: linear-gradient(120deg, #0f172a 0%, #1e3a8a 65%, #2563eb 100%);
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
+  color: #fff;
+  box-shadow: 0 10px 26px -12px rgba(37, 99, 235, 0.55);
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 65%);
+  pointer-events: none;
+}
+
+.dash-hero-text h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.45rem;
+  letter-spacing: -0.01em;
+}
+
+.dash-hero-date {
+  margin: 0.25rem 0 0;
+  color: #cbd5e1;
+  font-size: 0.83rem;
+  text-transform: capitalize;
+}
+
+.btn-hero {
+  background: #fff;
+  border: none;
+  color: #1e3a8a;
+  font-weight: 700;
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.4);
+}
+
+.btn-hero:hover {
+  background: #f1f5f9;
+}
+
 /* ===== Dashboard: filtro de fechas ===== */
 .date-filter {
   display: flex;
-  align-items: flex-end;
-  gap: 0.7rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
 }
 
-.date-filter .field {
-  margin-bottom: 0;
-  flex: 1;
-  min-width: 150px;
+.date-quick {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .date-filter-icon {
   color: var(--primary);
-  margin-bottom: 0.55rem;
   flex-shrink: 0;
+  margin-right: 0.15rem;
+}
+
+.pill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.pill-reset {
+  padding: 0.32rem 0.5rem;
+}
+
+.date-inputs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.date-inputs .field {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 140px;
+}
+
+.date-sep {
+  color: var(--muted);
+  padding-bottom: 0.55rem;
+  font-weight: 700;
 }
 
 /* ===== Dashboard: gráfico de torta ===== */
 .chart-card {
   overflow: visible;
+  padding: 1.1rem 1.15rem;
+}
+
+.chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.chart-sub {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.chart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.chart-empty svg {
+  color: #cbd5e1;
 }
 
 .chart-grid {
   display: flex;
-  gap: 1.2rem;
+  gap: 1.4rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .donut-wrap {
   flex: 0 0 auto;
-  width: 230px;
+  width: 225px;
   max-width: 100%;
 }
 
@@ -1279,19 +1513,20 @@ code {
 }
 
 .donut-center-num {
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 800;
   fill: var(--text);
 }
 
 .donut-center-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   fill: var(--muted);
 }
 
 .donut-center-dept {
   font-size: 10px;
+  font-weight: 600;
   fill: var(--muted);
 }
 
@@ -1300,19 +1535,19 @@ code {
   margin: 0;
   padding: 0;
   flex: 1;
-  min-width: 240px;
+  min-width: 250px;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
 
 .chart-legend li {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.84rem;
-  padding: 0.25rem 0.4rem;
-  border-radius: 7px;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
 }
 
 .chart-legend li:hover {
@@ -1322,7 +1557,7 @@ code {
 .legend-dot {
   width: 11px;
   height: 11px;
-  border-radius: 3px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 
@@ -1335,10 +1570,28 @@ code {
   white-space: nowrap;
 }
 
-.chart-sub {
-  margin-top: -0.3rem;
-  margin-bottom: 0.8rem;
-  line-height: 1.4;
+.legend-pct {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted);
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.legend-track {
+  width: 74px;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.legend-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
 }
 
 .legend-count {
@@ -1346,6 +1599,50 @@ code {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.05rem 0.5rem;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   flex-shrink: 0;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* ===== Skeleton de carga ===== */
+.skeleton {
+  pointer-events: none;
+}
+
+.sk-chip {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.sk-line {
+  display: block;
+  height: 12px;
+  width: 60%;
+  border-radius: 6px;
+  background: var(--bg);
+  margin-top: 0.55rem;
+}
+
+.sk-line.wide {
+  width: 85%;
+  height: 20px;
+  margin-top: 0;
+}
+
+.sk-chip,
+.sk-line {
+  animation: sk-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes sk-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
 }
