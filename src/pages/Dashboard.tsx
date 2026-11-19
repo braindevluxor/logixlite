@@ -8,6 +8,7 @@ import {
   Plus,
   RotateCcw,
   Route,
+  X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { TripStatus } from '../lib/types'
@@ -26,6 +27,16 @@ interface PassRow {
 interface DeptStat {
   name: string
   count: number
+}
+
+interface PendingTrip {
+  id: number
+  status: TripStatus
+  departure_at: string
+  notes: string | null
+  vehicle: { plate: string; brand: string | null; model: string | null } | null
+  driver: { full_name: string } | null
+  branch: { name: string } | null
 }
 
 const COLORS = [
@@ -145,6 +156,12 @@ export default function Dashboard() {
   const [trips, setTrips] = useState<TripRow[]>([])
   const [passengers, setPassengers] = useState<PassRow[]>([])
 
+  // Modal de viajes pendientes
+  const [showPending, setShowPending] = useState(false)
+  const [pendingTrips, setPendingTrips] = useState<PendingTrip[]>([])
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [pendingError, setPendingError] = useState<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
@@ -244,6 +261,36 @@ export default function Dashboard() {
   )
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0)
+
+  /** Carga y abre el modal de viajes pendientes (rango de fechas activo) */
+  async function openPending() {
+    setShowPending(true)
+    setPendingLoading(true)
+    setPendingError(null)
+
+    const fromIso = new Date(`${from}T00:00:00`).toISOString()
+    const toIso = new Date(`${to}T23:59:59.999`).toISOString()
+
+    const { data, error } = await supabase
+      .from('trips')
+      .select(
+        `id, status, departure_at, notes,
+         vehicle:vehicles(plate, brand, model),
+         driver:drivers(full_name),
+         branch:branches(name)`
+      )
+      .gte('departure_at', fromIso)
+      .lte('departure_at', toIso)
+      .in('status', ['programado', 'en_curso'])
+      .order('departure_at', { ascending: true })
+
+    if (error) {
+      setPendingError(error.message)
+    } else {
+      setPendingTrips((data as unknown as PendingTrip[]) ?? [])
+    }
+    setPendingLoading(false)
+  }
 
   // Rangos rápidos activos
   const today = localISO(new Date())
@@ -355,7 +402,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="card stat-card stat-pend">
+            <div
+              className="card stat-card stat-pend clickable"
+              onClick={openPending}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openPending()
+                }
+              }}
+              title="Ver viajes pendientes"
+            >
               <span className="stat-icon stat-icon-pend">
                 <Clock size={20} />
               </span>
@@ -365,8 +424,8 @@ export default function Dashboard() {
                 <div className="mini-bar">
                   <div className="mini-fill pend" style={{ width: `${pct(stats.pendientes)}%` }} />
                 </div>
-                <span className="muted small">
-                  {pct(stats.pendientes)}% · programados + en curso
+                <span className="stat-cta">
+                  Ver listado <ArrowRight size={13} />
                 </span>
               </div>
             </div>
@@ -433,6 +492,89 @@ export default function Dashboard() {
             )}
           </div>
         </>
+      )}
+
+      {/* ===== Modal: viajes pendientes ===== */}
+      {showPending && (
+        <div className="modal-backdrop" onClick={() => setShowPending(false)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Viajes pendientes"
+          >
+            <div className="modal-head">
+              <div>
+                <h2>
+                  <Clock size={18} /> Viajes pendientes
+                </h2>
+                <p className="muted small">
+                  {from} → {to} · programados y en curso
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setShowPending(false)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {pendingLoading ? (
+              <div className="pending-list">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="pending-row skeleton">
+                    <span className="sk-line wide" />
+                    <span className="sk-line" />
+                  </div>
+                ))}
+              </div>
+            ) : pendingError ? (
+              <div className="alert alert-error">{pendingError}</div>
+            ) : pendingTrips.length === 0 ? (
+              <div className="chart-empty">
+                <CircleCheck size={28} />
+                <p>No hay viajes pendientes en este rango. ¡Todo listo! 🎉</p>
+              </div>
+            ) : (
+              <div className="pending-list">
+                {pendingTrips.map((t) => (
+                  <Link
+                    key={t.id}
+                    to={`/viajes/${t.id}`}
+                    className="pending-row"
+                    onClick={() => setShowPending(false)}
+                  >
+                    <div className="pending-main">
+                      <strong>
+                        {t.vehicle?.plate ?? '—'}
+                        {t.branch?.name ? ` → ${t.branch.name}` : ''}
+                      </strong>
+                      <span className="muted small">
+                        {new Date(t.departure_at).toLocaleString('es-VE', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                        {' · '}
+                        {t.driver?.full_name ?? 'Sin chofer'}
+                      </span>
+                      {t.notes && <span className="pending-notes">{t.notes}</span>}
+                    </div>
+                    <div className="pending-side">
+                      <span className={`badge badge-${t.status}`}>
+                        {t.status === 'programado' ? 'Programado' : 'En curso'}
+                      </span>
+                      <ArrowRight size={16} className="pending-arrow" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

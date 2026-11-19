@@ -1610,6 +1610,121 @@ code {
   pointer-events: none;
 }
 
+/* ===== Tarjeta clicable + CTA ===== */
+.stat-card.clickable {
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -12px rgba(217, 119, 6, 0.55);
+  border-color: #fde68a;
+}
+
+.stat-card.clickable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.stat-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+/* ===== Modal de viajes pendientes ===== */
+.modal-wide {
+  max-width: 620px;
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.modal-head h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.05rem;
+}
+
+.modal-head p {
+  margin: 0.25rem 0 0;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.pending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.pending-row:hover {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.pending-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pending-notes {
+  font-size: 0.76rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-side {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.pending-arrow {
+  color: var(--muted);
+}
+
+.pending-row.skeleton {
+  display: block;
+  pointer-events: none;
+}
+
 .sk-chip {
   width: 42px;
   height: 42px;
