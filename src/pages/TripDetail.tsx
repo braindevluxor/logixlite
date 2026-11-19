@@ -250,8 +250,23 @@ export default function TripDetail() {
     ].join('\n')
   }
 
-  function waUrl(msg: string): string {
-    return `https://wa.me/?text=${encodeURIComponent(msg)}`
+  /**
+   * Convierte un teléfono venezolano al formato internacional de
+   * WhatsApp: 04124362012 -> 584124362012 (sin +, sin espacios).
+   */
+  function toIntlPhone(phone: string): string | null {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 8) return null
+    if (digits.startsWith('58')) return digits
+    if (digits.startsWith('0')) return '58' + digits.slice(1)
+    return digits
+  }
+
+  /** Enlace de WhatsApp: directo al chat si hay teléfono, si no al selector */
+  function waUrl(msg: string, phone?: string | null): string {
+    const intl = phone ? toIntlPhone(phone) : null
+    const base = intl ? `https://wa.me/${intl}` : 'https://wa.me/'
+    return `${base}?text=${encodeURIComponent(msg)}`
   }
 
   async function copyMsg(p: TripPassenger) {
@@ -556,7 +571,8 @@ export default function TripDetail() {
                   <Send size={18} /> Avisar a los pasajeros
                 </h2>
                 <p className="muted small">
-                  WhatsApp se abre con el mensaje listo: elige el contacto y envía.
+                  Si el pasajero tiene teléfono, WhatsApp se abre directo en su
+                  chat; si no, se abre el selector de contactos.
                 </p>
               </div>
               <button
@@ -576,6 +592,10 @@ export default function TripDetail() {
                   <div key={p.id} className="notify-row">
                     <div className="notify-main">
                       <strong>{p.full_name}</strong>
+                      <span className="muted small notify-sub">
+                        C.I. {p.dni}
+                        {p.phone ? ` · ${p.phone}` : ' · sin teléfono'}
+                      </span>
                       <pre className="notify-msg">{msg}</pre>
                     </div>
                     <div className="notify-actions">
@@ -597,7 +617,7 @@ export default function TripDetail() {
                       </button>
                       <a
                         className="btn btn-sm btn-primary"
-                        href={waUrl(msg)}
+                        href={waUrl(msg, p.phone)}
                         target="_blank"
                         rel="noreferrer"
                       >

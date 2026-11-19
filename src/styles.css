@@ -2477,6 +2477,11 @@ code {
   min-width: 0;
 }
 
+.notify-sub {
+  display: block;
+  margin-top: 0.1rem;
+}
+
 .notify-msg {
   margin: 0.4rem 0 0;
   font-family: inherit;

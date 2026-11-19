@@ -63,6 +63,8 @@ export interface TripPassenger {
   origin_destination_id: number | null
   /** Observación individual (ej. "Fumigación") */
   observation: string | null
+  /** Teléfono al momento de crear el viaje (instantánea) */
+  phone: string | null
 }
 
 export interface TripDestination {
@@ -125,6 +127,8 @@ export interface ApiEmployee {
   dni: number
   name: string
   lastname: string
+  /** Teléfono móvil (ej. 04124362012); puede venir vacío */
+  phone?: string | null
   role_id: string
   role_name: string
   department_id: number

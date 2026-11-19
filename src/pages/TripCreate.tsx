@@ -37,6 +37,8 @@ interface SelectedPassenger {
   manual?: boolean
   /** Observación individual (ej. "Fumigación") */
   observation?: string | null
+  /** Teléfono (de la API o capturado a mano) */
+  phone?: string | null
 }
 
 /** Convierte ISO a valor para input datetime-local (hora local) */
@@ -89,6 +91,7 @@ export default function TripCreate() {
   const [manualName, setManualName] = useState('')
   const [manualDni, setManualDni] = useState('')
   const [manualRole, setManualRole] = useState('')
+  const [manualPhone, setManualPhone] = useState('')
   const [manualError, setManualError] = useState<string | null>(null)
 
   // Destinos
@@ -267,6 +270,7 @@ export default function TripCreate() {
           department: x.department,
           branch_id: x.branch_id,
           observation: x.observation,
+          phone: x.phone,
         }))
       )
       setPassengerOrigins(origins)
@@ -399,6 +403,7 @@ export default function TripCreate() {
           role_name: e.role_name || null,
           department: e.department_name || null,
           branch_id: e.branch_id,
+          phone: e.phone || null,
         },
       ]
     })
@@ -409,6 +414,7 @@ export default function TripCreate() {
     setManualName('')
     setManualDni('')
     setManualRole('')
+    setManualPhone('')
     setManualError(null)
     setManualOpen(true)
   }
@@ -438,12 +444,14 @@ export default function TripCreate() {
         department: null,
         branch_id: null,
         manual: true,
+        phone: manualPhone.replace(/\D/g, '') || null,
       },
     ])
     setManualOpen(false)
     setManualName('')
     setManualDni('')
     setManualRole('')
+    setManualPhone('')
     setManualError(null)
   }
 
@@ -460,6 +468,7 @@ export default function TripCreate() {
         role_name: e.role_name || null,
         department: e.department_name || null,
         branch_id: e.branch_id,
+        phone: e.phone || null,
       }))
     const total = selected.length + additions.length
     if (capacity > 0 && total > capacity) {
@@ -829,6 +838,7 @@ export default function TripCreate() {
           role_name: p.role_name,
           department: p.department,
           branch_id: p.branch_id,
+          phone: p.phone ?? null,
           origin_destination_id:
             passengerOrigins[p.dni] != null
               ? destIdByPos.get(passengerOrigins[p.dni]) ?? null
@@ -1683,6 +1693,16 @@ export default function TripCreate() {
                 value={manualRole}
                 onChange={(e) => setManualRole(e.target.value)}
                 placeholder="Ej: Invitado, Proveedor, Familiar"
+              />
+            </label>
+
+            <label className="field">
+              <span>Teléfono (opcional)</span>
+              <input
+                value={manualPhone}
+                onChange={(e) => setManualPhone(e.target.value.replace(/[^\d+ ]/g, ''))}
+                placeholder="Ej: 04124362012"
+                inputMode="tel"
               />
             </label>
 
