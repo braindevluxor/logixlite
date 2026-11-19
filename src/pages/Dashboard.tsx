@@ -332,6 +332,8 @@ export default function Dashboard() {
 
   // ---- Detalle al clickear un departamento del grafico ----
   const [deptModal, setDeptModal] = useState<string | null>(null)
+  // ---- Detalle al clickear una parada/destino del segundo grafico ----
+  const [stopModal, setStopModal] = useState<string | null>(null)
 
   /** Pasajeros del departamento elegido: nombre, destino, hora y fecha */
   const deptRows = useMemo(() => {
@@ -376,6 +378,27 @@ export default function Dashboard() {
       .replace(/a\.\s*m\.?/i, 'AM')
       .replace(/p\.\s*m\.?/i, 'PM')
   }
+
+  /** Pasajeros que bajaron en el destino elegido */
+  const stopModalRows = useMemo(() => {
+    if (!stopModal) return []
+    const pids = new Set<number>()
+    for (const r of linkRows) {
+      if (r.trip_destination?.name?.trim() === stopModal) pids.add(r.trip_passenger_id)
+    }
+    const tripById = new Map(trips.map((t) => [t.id, t]))
+    return passengers
+      .filter((p) => pids.has(p.id))
+      .map((p) => ({
+        name: p.full_name,
+        dept: p.department ?? '—',
+        at: tripById.get(p.trip_id)?.departure_at ?? null,
+      }))
+      .sort(
+        (a, b) =>
+          (a.at ?? '').localeCompare(b.at ?? '') || a.name.localeCompare(b.name, 'es')
+      )
+  }, [stopModal, passengers, trips, linkRows])
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0)
 
@@ -672,10 +695,16 @@ export default function Dashboard() {
                   centerValue={stopStats.uniqueCount}
                   centerLabel="paradas"
                   hoverLabel="viajes"
+                  onSelect={setStopModal}
                 />
                 <ul className="chart-legend">
                   {stopDonut.map((d) => (
-                    <li key={d.name}>
+                    <li
+                      key={d.name}
+                      className="legend-clickable"
+                      onClick={() => setStopModal(d.name)}
+                      title="Ver los pasajeros que bajaron aquí"
+                    >
                       <span className="legend-dot" style={{ background: d.color }} />
                       <span className="legend-name">{d.name}</span>
                       <strong className="legend-count">{d.count} viajes</strong>
@@ -726,6 +755,56 @@ export default function Dashboard() {
                     <span className="dept-dest">
                       ({r.dests.length > 0 ? r.dests.map((n) => up(n)).join(', ') : '—'})
                     </span>
+                    <span className="dept-when">
+                      {r.at
+                        ? `${fmtTime12(r.at)} ${new Date(r.at).toLocaleDateString('es-VE', {
+                            dateStyle: 'short',
+                          })}`
+                        : '—'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: pasajeros de un destino ===== */}
+      {stopModal && (
+        <div className="modal-backdrop" onClick={() => setStopModal(null)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Pasajeros de ${stopModal}`}
+          >
+            <div className="modal-head">
+              <div>
+                <h2>{up(stopModal)}</h2>
+                <p className="muted small">
+                  {stopModalRows.length} pasajero(s) que bajaron aquí · {from} → {to}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setStopModal(null)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="dept-list">
+              {stopModalRows.length === 0 ? (
+                <p className="muted">Sin pasajeros en este rango de fechas.</p>
+              ) : (
+                stopModalRows.map((r, i) => (
+                  <div key={i} className="dept-row">
+                    <strong className="dept-name">{r.name}</strong>
+                    <span className="dept-dest">({r.dept})</span>
                     <span className="dept-when">
                       {r.at
                         ? `${fmtTime12(r.at)} ${new Date(r.at).toLocaleDateString('es-VE', {
