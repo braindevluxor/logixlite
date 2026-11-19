@@ -174,9 +174,19 @@ export default function DayPlan() {
     setSharing(true)
     setError(null)
     try {
+      // Calidad: capturar hasta 4x la resolucion CSS. Si el lienzo
+      // excede el limite de memoria de navegadores moviles (iOS ~16.7M
+      // pixeles), se reduce automaticamente para no fallar.
+      const rect = node.getBoundingClientRect()
+      const maxPixels = 12_000_000
+      let ratio = 4
+      while (ratio > 1.5 && rect.width * rect.height * ratio * ratio > maxPixels) {
+        ratio -= 0.5
+      }
+
       const dataUrl = await toPng(node, {
         backgroundColor: '#ffffff',
-        pixelRatio: 2,
+        pixelRatio: ratio,
         cacheBust: true,
       })
       const blob = await (await fetch(dataUrl)).blob()
