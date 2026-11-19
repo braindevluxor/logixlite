@@ -65,7 +65,11 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="app">
       <header className="topbar">
         <span className="brand">
-          <img src="/logo-mark.png" alt="LOGIXLITE" className="brand-logo" />
+          <img
+            src="/logo-white.webp"
+            alt="LOGIXLITE"
+            className="brand-logo brand-logo-white"
+          />
           LOGIXLITE
         </span>
 
