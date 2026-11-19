@@ -95,14 +95,10 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
-      {/* Menu lateral: visible solo en escritorio (>= 900px) */}
+      {/* Menu lateral flotante: visible solo en escritorio (>= 900px) */}
       <nav className="sidenav" aria-label="Menú principal">
         <span className="brand">
-          <img
-            src="/logo-white.webp"
-            alt="LOGIXLITE"
-            className="brand-logo brand-logo-white"
-          />
+          <img src="/logo-mark.png" alt="" className="brand-logo" />
           LOGIXLITE
         </span>
         {navLinks}

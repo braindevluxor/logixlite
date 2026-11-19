@@ -281,16 +281,17 @@ code {
   justify-content: center;
 }
 
-/* ===== Menu lateral (solo escritorio, >= 900px) =====
-   En movil se mantiene la barra inferior flotante (.bottomnav). */
+/* ===== Menu lateral flotante (solo escritorio, >= 900px) =====
+   Mismo estilo que la barra inferior: tarjeta blanca translucida,
+   blur, borde redondeado 18px y sombra, despegada de los bordes. */
 .sidenav {
   display: none;
 }
 
 @media (min-width: 900px) {
-  /* El topbar y el contenido se corren a la derecha de la barra */
+  /* El topbar y el contenido se corren a la derecha de la tarjeta */
   .app {
-    padding-left: 216px;
+    padding-left: 220px;
   }
 
   .sidenav {
@@ -298,14 +299,18 @@ code {
     flex-direction: column;
     gap: 2px;
     position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 216px;
+    top: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: 200px;
     z-index: 30;
-    background: #0f172a;
-    color: #fff;
-    padding: 0.7rem;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.4);
+    padding: 6px;
     overflow-y: auto;
   }
 
@@ -313,10 +318,17 @@ code {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.2rem 0.35rem 0.9rem;
-    color: #fff;
+    padding: 0.6rem 0.65rem 0.75rem;
+    color: var(--text);
     font-weight: 700;
     letter-spacing: 0.04em;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .sidenav .brand-logo {
+    height: 26px;
   }
 
   .sidenav a {
@@ -324,24 +336,22 @@ code {
     align-items: center;
     gap: 0.6rem;
     padding: 0.6rem 0.7rem;
-    border-radius: 10px;
-    color: #cbd5e1;
-    font-size: 0.9rem;
-    font-weight: 500;
+    border-radius: 13px;
+    color: var(--muted);
+    font-size: 0.88rem;
     transition:
       background 0.15s,
       color 0.15s;
   }
 
   .sidenav a:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--bg);
   }
 
   .sidenav a.active {
-    background: rgba(37, 99, 235, 0.35);
-    color: #fff;
+    color: var(--primary);
     font-weight: 600;
+    background: #eff6ff;
   }
 
   /* En escritorio el menu es lateral: la barra inferior no aplica */
@@ -353,7 +363,7 @@ code {
     padding-bottom: 2rem;
   }
 
-  /* El logo vive en la barra lateral; arriba quedan el buscador
+  /* El logo vive en el menu lateral; arriba quedan el buscador
      centrado y la sesion a la derecha */
   .topbar {
     justify-content: flex-end;
