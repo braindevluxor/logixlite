@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, Flag, MapPin, Search, Trash2, X } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Flag,
+  MapPin,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
@@ -23,6 +33,8 @@ interface SelectedPassenger {
   role_name: string | null
   department: string | null
   branch_id: number | null
+  /** true si se agregó a mano (no viene de la API de trabajadores) */
+  manual?: boolean
 }
 
 /** Convierte ISO a valor para input datetime-local (hora local) */
@@ -68,6 +80,13 @@ export default function TripCreate() {
   const [passengerSearch, setPassengerSearch] = useState('')
   const [selected, setSelected] = useState<SelectedPassenger[]>([])
   const [onlyActive, setOnlyActive] = useState(true)
+
+  // Pasajero manual (persona que no aparece en la API)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualName, setManualName] = useState('')
+  const [manualDni, setManualDni] = useState('')
+  const [manualRole, setManualRole] = useState('')
+  const [manualError, setManualError] = useState<string | null>(null)
 
   // Destinos
   const [destinations, setDestinations] = useState<TripDestination[]>([])
@@ -359,6 +378,49 @@ export default function TripCreate() {
         },
       ]
     })
+  }
+
+  /** Agrega a la selección una persona que no está en la API */
+  function openManualAdd() {
+    setManualName('')
+    setManualDni('')
+    setManualRole('')
+    setManualError(null)
+    setManualOpen(true)
+  }
+
+  function addManualPassenger(e: FormEvent) {
+    e.preventDefault()
+    const name = manualName.trim()
+    const dni = manualDni.trim()
+
+    if (!name) return setManualError('El nombre es obligatorio')
+    if (!dni) return setManualError('La cédula es obligatoria')
+    if (selected.some((p) => p.dni === dni))
+      return setManualError('Esa cédula ya está en la lista de pasajeros')
+    if (employees.some((emp) => String(emp.dni) === dni))
+      return setManualError(
+        'Esa cédula pertenece a un trabajador de la API: seleccionalo en la lista'
+      )
+    if (capacity > 0 && selected.length >= capacity)
+      return setManualError(`El vehículo solo tiene ${capacity} puestos`)
+
+    setSelected((prev) => [
+      ...prev,
+      {
+        dni,
+        full_name: name,
+        role_name: manualRole.trim() || null,
+        department: null,
+        branch_id: null,
+        manual: true,
+      },
+    ])
+    setManualOpen(false)
+    setManualName('')
+    setManualDni('')
+    setManualRole('')
+    setManualError(null)
   }
 
   function selectAllFiltered() {
@@ -977,10 +1039,25 @@ export default function TripCreate() {
             </label>
           </div>
 
-          <div className="row spread gap-sm">
-            <span className={`capacity-pill ${overCapacity ? 'over' : ''}`}>
-              {selected.length} / {capacity} puestos
-            </span>
+          <div className="row spread gap-sm wrap">
+            <div className="row gap-sm">
+              <span className={`capacity-pill ${overCapacity ? 'over' : ''}`}>
+                {selected.length} / {capacity} puestos
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={openManualAdd}
+                disabled={capacity > 0 && selected.length >= capacity}
+                title={
+                  capacity > 0 && selected.length >= capacity
+                    ? 'No hay puestos disponibles'
+                    : 'Agregar una persona que no aparece en la nómina'
+                }
+              >
+                <UserPlus size={14} /> Pasajero manual
+              </button>
+            </div>
             <button
               type="button"
               className="btn btn-sm"
@@ -1116,8 +1193,8 @@ export default function TripCreate() {
                   )
                 })}
 
-                {/* Seleccionados que ya no aparecen en la API
-                    (común al editar viajes antiguos) */}
+                {/* Seleccionados que no están en la API:
+                    pasajeros manuales y trabajadores fuera de ella */}
                 {selectedMissing.length > 0 && (
                   <li>
                     <div className="list-divider">Seleccionados</div>
@@ -1136,11 +1213,16 @@ export default function TripCreate() {
                         <span>
                           <strong>{p.full_name}</strong>
                           <span className="muted small block">
-                            C.I. {p.dni} · {p.role_name ?? '—'}
+                            C.I. {p.dni}
+                            {p.role_name ? ` · ${p.role_name}` : ''}
                           </span>
                           <span className="muted small block">
-                            {p.department ?? '—'}
-                            <em className="badge badge-inactivo"> no está en la API</em>
+                            {p.department ?? (p.manual ? 'Pasajero manual' : '—')}
+                            {p.manual ? (
+                              <em className="badge badge-manual"> manual</em>
+                            ) : (
+                              <em className="badge badge-inactivo"> no está en la API</em>
+                            )}
                           </span>
                         </span>
                       </label>
@@ -1511,6 +1593,69 @@ export default function TripCreate() {
                   : 'Crear viaje'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ===== Modal: pasajero manual ===== */}
+      {manualOpen && (
+        <div className="modal-backdrop" onClick={() => setManualOpen(false)}>
+          <form
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={addManualPassenger}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2>Agregar pasajero manual</h2>
+            <p className="muted small">
+              Para personas que no aparecen en la nómina: invitados, proveedores,
+              visitantes, familiares.
+            </p>
+
+            <label className="field">
+              <span>Nombre completo *</span>
+              <input
+                autoFocus
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                placeholder="Ej: María Pérez"
+              />
+            </label>
+
+            <label className="field">
+              <span>Cédula *</span>
+              <input
+                value={manualDni}
+                onChange={(e) => setManualDni(e.target.value.replace(/\D/g, ''))}
+                placeholder="Solo números, ej: 12345678"
+                inputMode="numeric"
+              />
+            </label>
+
+            <label className="field">
+              <span>Cargo o identificación (opcional)</span>
+              <input
+                value={manualRole}
+                onChange={(e) => setManualRole(e.target.value)}
+                placeholder="Ej: Invitado, Proveedor, Familiar"
+              />
+            </label>
+
+            {manualError && <div className="alert alert-error">{manualError}</div>}
+
+            <div className="row gap">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setManualOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button className="btn btn-primary grow">
+                <UserPlus size={15} /> Agregar a la lista
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

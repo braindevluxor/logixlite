@@ -855,6 +855,12 @@ code {
   color: var(--primary-dark);
 }
 
+/* Badge de pasajero manual (no viene de la API) */
+.badge-manual {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
 /* Pista de búsqueda vacía en el paso 2 */
 .search-hint {
   display: flex;
