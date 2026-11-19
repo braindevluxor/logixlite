@@ -6,13 +6,14 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   Bus,
   Car,
   House,
   IdCard,
   Search,
+  X,
 } from 'lucide-react'
 import { useAuth } from './auth/AuthContext'
 import { useSearch } from './search/SearchContext'
@@ -39,6 +40,8 @@ function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { query, setQuery } = useSearch()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Buscador global solo en las pantallas que lo usan
   const searchPlaceholder =
@@ -47,6 +50,11 @@ function Shell({ children }: { children: ReactNode }) {
       : location.pathname === '/choferes'
         ? 'Buscar por nombre o cédula…'
         : null
+
+  // En movil, al desplegar el campo se enfoca automaticamente
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
 
   async function handleSignOut() {
     await signOut()
@@ -62,19 +70,34 @@ function Shell({ children }: { children: ReactNode }) {
         </span>
 
         {searchPlaceholder && (
-          <div className="topbar-search">
+          <div className={`topbar-search ${searchOpen ? 'open' : ''}`}>
             <Search size={15} aria-hidden />
             <input
+              ref={searchInputRef}
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchOpen(false)
+              }}
             />
           </div>
         )}
 
         <div className="topbar-right">
+          {searchPlaceholder && (
+            <button
+              type="button"
+              className="topbar-search-btn"
+              onClick={() => setSearchOpen((v) => !v)}
+              aria-label={searchOpen ? 'Cerrar búsqueda' : 'Buscar'}
+              aria-expanded={searchOpen}
+            >
+              {searchOpen ? <X size={17} /> : <Search size={17} />}
+            </button>
+          )}
           <span className="user-email">{session?.user.email}</span>
           <button className="btn btn-ghost" onClick={handleSignOut}>
             Salir

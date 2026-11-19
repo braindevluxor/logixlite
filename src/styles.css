@@ -164,7 +164,28 @@ code {
   filter: invert(1);
 }
 
-/* En móvil el buscador pasa a una segunda fila a todo el ancho */
+/* Botón de lupa: solo en móvil (en escritorio el campo siempre visible) */
+.topbar-search-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.topbar-search-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* En móvil: lupa en la barra; el campo se despliega al tocarla */
 @media (max-width: 640px) {
   .topbar {
     flex-wrap: wrap;
@@ -173,17 +194,28 @@ code {
 
   .topbar-right {
     order: 1;
+    gap: 0.5rem;
+  }
+
+  .user-email {
+    display: none;
+  }
+
+  .topbar-search-btn {
+    display: inline-flex;
   }
 
   .topbar-search {
-    position: static;
+    display: none;
+    position: relative; /* ancla correcta para el icono interno */
+    left: auto;
     transform: none;
     order: 2;
     width: 100%;
   }
 
-  .user-email {
-    display: none;
+  .topbar-search.open {
+    display: block;
   }
 }
 
