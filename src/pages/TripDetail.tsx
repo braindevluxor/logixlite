@@ -379,6 +379,9 @@ export default function TripDetail() {
                       {p.role_name ? ` · ${p.role_name}` : ''}
                     </div>
                     {p.department && <div className="muted small">{p.department}</div>}
+                    {p.observation && (
+                      <div className="obs-note">Obs: {p.observation}</div>
+                    )}
                     <div className="dest-tags">
                       <span className={`chip chip-origin ${originName ? 'on' : ''}`}>
                         <MapPin size={12} /> {originName ?? 'Sin origen'}

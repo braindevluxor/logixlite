@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   Bus,
+  CalendarDays,
   Car,
   House,
   IdCard,
@@ -20,6 +21,7 @@ import { useSearch } from './search/SearchContext'
 import TotpGate from './auth/TotpGate'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import DayPlan from './pages/DayPlan'
 import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Branches from './pages/Branches'
@@ -118,6 +120,15 @@ function Shell({ children }: { children: ReactNode }) {
           </span>
           Dashboard
         </NavLink>
+        <NavLink
+          to="/planificacion"
+          className={({ isActive }) => (isActive ? 'active' : '')}
+        >
+          <span className="nav-icon">
+            <CalendarDays size={20} />
+          </span>
+          Plan
+        </NavLink>
         <NavLink to="/viajes" className={({ isActive }) => (isActive ? 'active' : '')}>
           <span className="nav-icon">
             <Bus size={20} />
@@ -156,6 +167,16 @@ export default function App() {
           <Protected>
             <Shell>
               <Dashboard />
+            </Shell>
+          </Protected>
+        }
+      />
+      <Route
+        path="/planificacion"
+        element={
+          <Protected>
+            <Shell>
+              <DayPlan />
             </Shell>
           </Protected>
         }

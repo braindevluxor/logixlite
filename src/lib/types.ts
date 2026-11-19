@@ -61,6 +61,8 @@ export interface TripPassenger {
   department: string | null
   branch_id: number | null
   origin_destination_id: number | null
+  /** Observación individual (ej. "Fumigación") */
+  observation: string | null
 }
 
 export interface TripDestination {

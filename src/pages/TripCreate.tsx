@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Check,
   ChevronDown,
@@ -35,6 +35,8 @@ interface SelectedPassenger {
   branch_id: number | null
   /** true si se agregó a mano (no viene de la API de trabajadores) */
   manual?: boolean
+  /** Observación individual (ej. "Fumigación") */
+  observation?: string | null
 }
 
 /** Convierte ISO a valor para input datetime-local (hora local) */
@@ -48,6 +50,7 @@ export default function TripCreate() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const { id: editId } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const isEdit = !!editId
 
   const [step, setStep] = useState<Step>(1)
@@ -102,9 +105,24 @@ export default function TripCreate() {
   const [passengerDests, setPassengerDests] = useState<Record<string, number[]>>({})
   // Origen de cada pasajero (dni) → una sola posición (1, 2, 3...)
   const [passengerOrigins, setPassengerOrigins] = useState<Record<string, number>>({})
+  // Observación individual por pasajero (ej. "Fumigación")
+  const [passengerObs, setPassengerObs] = useState<Record<string, string>>({})
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? null
   const capacity = vehicle?.capacity ?? 0
+
+  // Si llegamos desde el plan del día (?date=YYYY-MM-DD), usamos esa fecha
+  useEffect(() => {
+    if (isEdit) return
+    const d = searchParams.get('date')
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      setDepartureAt(`${d}T${hh}:${mm}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     async function load() {
@@ -248,10 +266,16 @@ export default function TripCreate() {
           role_name: x.role_name,
           department: x.department,
           branch_id: x.branch_id,
+          observation: x.observation,
         }))
       )
       setPassengerOrigins(origins)
       setPassengerDests(dests)
+      const obs: Record<string, string> = {}
+      for (const x of passRows) {
+        if (x.observation) obs[x.dni] = x.observation
+      }
+      setPassengerObs(obs)
       setEditLoading(false)
     }
 
@@ -809,6 +833,7 @@ export default function TripCreate() {
             passengerOrigins[p.dni] != null
               ? destIdByPos.get(passengerOrigins[p.dni]) ?? null
               : null,
+          observation: passengerObs[p.dni]?.trim() || null,
         }))
       )
       .select('id, dni')
@@ -1402,6 +1427,21 @@ export default function TripCreate() {
                           Selecciona al menos una ubicación
                         </span>
                       )}
+
+                      {/* OBSERVACIÓN individual (se muestra en el plan del día) */}
+                      <label className="field obs-field">
+                        <span>Observación (opcional)</span>
+                        <input
+                          value={passengerObs[p.dni] ?? ''}
+                          onChange={(e) =>
+                            setPassengerObs((prev) => ({
+                              ...prev,
+                              [p.dni]: e.target.value,
+                            }))
+                          }
+                          placeholder="Ej: Fumigación, requiere EPP, etc."
+                        />
+                      </label>
                     </div>
                   </li>
                 )
@@ -1570,6 +1610,11 @@ export default function TripCreate() {
                           ))
                         )}
                       </div>
+                      {passengerObs[p.dni]?.trim() && (
+                        <div className="obs-note">
+                          Obs: {passengerObs[p.dni].trim()}
+                        </div>
+                      )}
                     </div>
                   </li>
                 )
