@@ -10,14 +10,18 @@ import {
   X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
 import type { TripStatus } from '../lib/types'
 
 interface TripRow {
   id: number
   status: TripStatus
+  departure_at: string
 }
 
 interface PassRow {
+  id: number
+  trip_id: number
   dni: string | number
   full_name: string
   department: string | null
@@ -25,6 +29,8 @@ interface PassRow {
 
 /** Filas de trip_passenger_destinations con destino y viaje embebidos */
 interface DestLinkRow {
+  trip_passenger_id: number
+  seq: number | null
   trip_destination: { name: string } | null
   trip_passengers: { trip_id: number } | null
 }
@@ -86,6 +92,7 @@ function Donut({
   centerValue,
   centerLabel,
   hoverLabel,
+  onSelect,
 }: {
   data: (DeptStat & { color: string })[]
   /** suma de los sectores (para el calculo de angulos) */
@@ -94,6 +101,8 @@ function Donut({
   centerValue?: number
   centerLabel: string
   hoverLabel?: string
+  /** clic en un sector: abre el detalle (ej. pasajeros del depto) */
+  onSelect?: (name: string) => void
 }) {
   const [hover, setHover] = useState<number | null>(null)
   const R = 70
@@ -134,7 +143,11 @@ function Donut({
               strokeDashoffset={-s.acc}
               onMouseEnter={() => setHover(s.idx)}
               onMouseLeave={() => setHover(null)}
-              style={{ transition: 'stroke-width 0.15s', cursor: 'pointer' }}
+              onClick={() => onSelect?.(s.name)}
+              style={{
+                transition: 'stroke-width 0.15s',
+                cursor: onSelect ? 'pointer' : 'default',
+              }}
             />
           ))}
         </g>
@@ -161,7 +174,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [trips, setTrips] = useState<TripRow[]>([])
   const [passengers, setPassengers] = useState<PassRow[]>([])
-  const [stopRows, setStopRows] = useState<{ name: string; trip_id: number }[]>([])
+  const [linkRows, setLinkRows] = useState<DestLinkRow[]>([])
 
   // Modal de viajes pendientes
   const [showPending, setShowPending] = useState(false)
@@ -186,7 +199,7 @@ export default function Dashboard() {
 
       const { data: tripData, error: tripErr } = await supabase
         .from('trips')
-        .select('id, status')
+        .select('id, status, departure_at')
         .gte('departure_at', fromIso)
         .lte('departure_at', toIso)
 
@@ -206,14 +219,14 @@ export default function Dashboard() {
         const [passRes, stopRes] = await Promise.all([
           supabase
             .from('trip_passengers')
-            .select('dni, full_name, department')
+            .select('id, trip_id, dni, full_name, department')
             .in('trip_id', ids),
           // Solo DESTINOS marcados por pasajeros: una ubicacion que es
           // solo ORIGEN no aparece aqui y por tanto no se cuenta
           supabase
             .from('trip_passenger_destinations')
             .select(
-              'trip_destination:trip_destinations(name), trip_passengers!inner(trip_id)'
+              'trip_passenger_id, seq, trip_destination:trip_destinations(name), trip_passengers!inner(trip_id)'
             )
             .in('trip_passengers.trip_id', ids),
         ])
@@ -235,16 +248,7 @@ export default function Dashboard() {
       if (!cancelled) {
         setTrips((tripData as TripRow[]) ?? [])
         setPassengers(passData)
-
-        // Agrupa destinos por nombre y viaje (3 pasajeros al mismo
-        // destino en un viaje = 1 entrada para ese viaje)
-        const rows: { name: string; trip_id: number }[] = []
-        for (const r of stopLinks) {
-          const name = r.trip_destination?.name?.trim()
-          const tripId = r.trip_passengers?.trip_id
-          if (name && tripId != null) rows.push({ name, trip_id: tripId })
-        }
-        setStopRows(rows)
+        setLinkRows(stopLinks)
         setLoading(false)
       }
     }
@@ -300,22 +304,23 @@ export default function Dashboard() {
    */
   const stopStats = useMemo(() => {
     const byName = new Map<string, Set<number>>()
-    for (const r of stopRows) {
-      const name = r.name.trim()
-      if (!name) continue
+    for (const r of linkRows) {
+      const name = r.trip_destination?.name?.trim()
+      const tripId = r.trip_passengers?.trip_id
+      if (!name || tripId == null) continue
       let trips = byName.get(name)
       if (!trips) {
         trips = new Set()
         byName.set(name, trips)
       }
-      trips.add(r.trip_id)
+      trips.add(tripId)
     }
     const uniqueCount = byName.size
     const list = [...byName.entries()]
       .map(([name, trips]) => ({ name, count: trips.size }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'))
     return { uniqueCount, list }
-  }, [stopRows])
+  }, [linkRows])
 
   const stopDonut = useMemo(
     () => stopStats.list.map((d, i) => ({ ...d, color: COLORS[i % COLORS.length] })),
@@ -324,6 +329,53 @@ export default function Dashboard() {
 
   /** suma de usos (para los angulos de la dona de paradas) */
   const stopTotalUses = stopDonut.reduce((s, d) => s + d.count, 0)
+
+  // ---- Detalle al clickear un departamento del grafico ----
+  const [deptModal, setDeptModal] = useState<string | null>(null)
+
+  /** Pasajeros del departamento elegido: nombre, destino, hora y fecha */
+  const deptRows = useMemo(() => {
+    if (!deptModal) return []
+    const list = passengers.filter(
+      (p) => (p.department?.trim() || 'Sin departamento') === deptModal
+    )
+    const tripById = new Map(trips.map((t) => [t.id, t]))
+
+    // Destinos asignados por pasajero (ordenados por seq)
+    const destsByPassenger = new Map<number, { name: string; seq: number | null }[]>()
+    for (const r of linkRows) {
+      const name = r.trip_destination?.name?.trim()
+      if (!name) continue
+      const arr = destsByPassenger.get(r.trip_passenger_id) ?? []
+      arr.push({ name, seq: r.seq })
+      destsByPassenger.set(r.trip_passenger_id, arr)
+    }
+
+    return list
+      .map((p) => {
+        const trip = tripById.get(p.trip_id)
+        const dests = (destsByPassenger.get(p.id) ?? [])
+          .sort((a, b) => (a.seq ?? 999) - (b.seq ?? 999))
+          .map((d) => d.name)
+        return {
+          name: p.full_name,
+          dests,
+          at: trip?.departure_at ?? null,
+        }
+      })
+      .sort(
+        (a, b) =>
+          (a.at ?? '').localeCompare(b.at ?? '') || a.name.localeCompare(b.name, 'es')
+      )
+  }, [deptModal, passengers, trips, linkRows])
+
+  /** "11:55 AM" / "6:00 PM" */
+  function fmtTime12(iso: string): string {
+    return new Date(iso)
+      .toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', hour12: true })
+      .replace(/a\.\s*m\.?/i, 'AM')
+      .replace(/p\.\s*m\.?/i, 'PM')
+  }
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0)
 
@@ -562,12 +614,18 @@ export default function Dashboard() {
                   data={topDepts}
                   total={totalTraslados}
                   centerLabel="traslados"
+                  onSelect={setDeptModal}
                 />
                 <ul className="chart-legend">
                   {topDepts.map((d) => {
                     const p = Math.round((d.count / totalTraslados) * 100)
                     return (
-                      <li key={d.name}>
+                      <li
+                        key={d.name}
+                        className="legend-clickable"
+                        onClick={() => setDeptModal(d.name)}
+                        title="Ver los pasajeros de este departamento"
+                      >
                         <span className="legend-dot" style={{ background: d.color }} />
                         <span className="legend-name">{d.name}</span>
                         <span className="legend-pct">{p}%</span>
@@ -629,6 +687,58 @@ export default function Dashboard() {
           </div>
           </div>
         </>
+      )}
+
+      {/* ===== Modal: pasajeros de un departamento ===== */}
+      {deptModal && (
+        <div className="modal-backdrop" onClick={() => setDeptModal(null)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Pasajeros de ${deptModal}`}
+          >
+            <div className="modal-head">
+              <div>
+                <h2>{deptModal}</h2>
+                <p className="muted small">
+                  {deptRows.length} pasajero(s) · {from} → {to}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setDeptModal(null)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="dept-list">
+              {deptRows.length === 0 ? (
+                <p className="muted">Sin pasajeros en este rango de fechas.</p>
+              ) : (
+                deptRows.map((r, i) => (
+                  <div key={i} className="dept-row">
+                    <strong className="dept-name">{r.name}</strong>
+                    <span className="dept-dest">
+                      ({r.dests.length > 0 ? r.dests.map((n) => up(n)).join(', ') : '—'})
+                    </span>
+                    <span className="dept-when">
+                      {r.at
+                        ? `${fmtTime12(r.at)} ${new Date(r.at).toLocaleDateString('es-VE', {
+                            dateStyle: 'short',
+                          })}`
+                        : '—'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ===== Modal: viajes pendientes ===== */}

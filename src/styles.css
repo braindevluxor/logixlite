@@ -2483,3 +2483,49 @@ code {
   gap: 1rem;
   align-items: start;
 }
+
+/* ===== Detalle de pasajeros por departamento (clic en el grafico) ===== */
+.legend-clickable {
+  cursor: pointer;
+}
+
+.legend-clickable:hover {
+  background: #eff6ff;
+}
+
+.dept-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.dept-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  font-size: 0.88rem;
+}
+
+.dept-name {
+  font-weight: 700;
+}
+
+.dept-dest {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.dept-when {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
