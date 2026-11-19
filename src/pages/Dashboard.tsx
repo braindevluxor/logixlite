@@ -5,7 +5,6 @@ import {
   Calendar,
   CircleCheck,
   Clock,
-  Plus,
   RotateCcw,
   Route,
   X,
@@ -73,15 +72,6 @@ function daysAgoISO(n: number): string {
   return localISO(d)
 }
 
-function longDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString('es-VE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
 
 // ===== Dona de traslados por departamento (SVG a mano) =====
 function Donut({
@@ -340,17 +330,6 @@ export default function Dashboard() {
 
   return (
     <div className="page dash">
-      {/* ---- Hero ---- */}
-      <div className="dash-hero">
-        <div className="dash-hero-text">
-          <h1>Dashboard</h1>
-          <p className="dash-hero-date">{longDate(today)}</p>
-        </div>
-        <Link className="btn btn-hero" to="/viajes/nuevo">
-          <Plus size={16} /> Nuevo viaje
-        </Link>
-      </div>
-
       {/* ---- Filtro de fechas ---- */}
       <div className="card date-filter">
         <div className="date-quick">

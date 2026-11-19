@@ -1523,60 +1523,6 @@ code {
   box-shadow: var(--shadow);
 }
 
-/* ===== Dashboard: hero ===== */
-.dash-hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  background: linear-gradient(120deg, #0f172a 0%, #1e3a8a 65%, #2563eb 100%);
-  border-radius: 16px;
-  padding: 1.25rem 1.35rem;
-  margin-bottom: 1rem;
-  color: #fff;
-  box-shadow: 0 10px 26px -12px rgba(37, 99, 235, 0.55);
-  position: relative;
-  overflow: hidden;
-}
-
-.dash-hero::before {
-  content: '';
-  position: absolute;
-  top: -60px;
-  right: -40px;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 65%);
-  pointer-events: none;
-}
-
-.dash-hero-text h1 {
-  margin: 0;
-  color: #fff;
-  font-size: 1.45rem;
-  letter-spacing: -0.01em;
-}
-
-.dash-hero-date {
-  margin: 0.25rem 0 0;
-  color: #cbd5e1;
-  font-size: 0.83rem;
-  text-transform: capitalize;
-}
-
-.btn-hero {
-  background: #fff;
-  border: none;
-  color: #1e3a8a;
-  font-weight: 700;
-  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.4);
-}
-
-.btn-hero:hover {
-  background: #f1f5f9;
-}
-
 /* ===== Dashboard: filtro de fechas ===== */
 .date-filter {
   display: flex;
