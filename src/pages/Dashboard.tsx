@@ -574,7 +574,7 @@ export default function Dashboard() {
             ) : pendingTrips.length === 0 ? (
               <div className="chart-empty">
                 <CircleCheck size={28} />
-                <p>No hay viajes pendientes en este rango. ¡Todo listo! 🎉</p>
+                <p>No hay viajes pendientes en este rango. Todo listo.</p>
               </div>
             ) : (
               <div className="pending-list">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Camera, Car, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
+import { Camera, Car, Pencil, Plus, Search, Trash2, UserRound, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
   removeVehiclePhoto,
@@ -281,7 +281,11 @@ export default function Vehicles() {
 
                   <div className="veh-tags">
                     <span className="capacity-pill">{v.capacity} puestos</span>
-                    {driver && <span className="veh-driver">🧑 {driver}</span>}
+                    {driver && (
+                      <span className="veh-driver">
+                        <UserRound size={12} /> {driver}
+                      </span>
+                    )}
                   </div>
 
                   {v.notes && <div className="veh-notes">{v.notes}</div>}

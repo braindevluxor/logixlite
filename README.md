@@ -1,4 +1,4 @@
-# LOGIXLITE 🚌
+# LOGIXLITE
 
 PWA para administrar la flota de transporte particular: vehículos, choferes, sucursales y creación de viajes (vehículo → chofer → pasajeros → destinos ordenados).
 
@@ -57,7 +57,7 @@ Header: API_KEY: <clave>
 
 Devuelve: `dni, name, lastname, role_name, department_name, branch_id, branch_name, active, …`
 
-> ⚠️ **CORS:** esa API solo permite los headers `token, Content-Type` en su
+> **CORS (importante):** esa API solo permite los headers `token, Content-Type` en su
 > preflight, pero el endpoint exige `API_KEY`, así que el navegador bloquea la
 > petición directa. Por eso la app nunca llama a la API desde el navegador:
 >

@@ -1816,6 +1816,9 @@ code {
 }
 
 .veh-driver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.73rem;
   font-weight: 600;
   color: var(--muted);
@@ -1827,6 +1830,10 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.veh-driver svg {
+  flex-shrink: 0;
 }
 
 .veh-notes {
