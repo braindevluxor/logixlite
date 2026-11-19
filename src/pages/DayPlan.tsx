@@ -5,7 +5,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Share2,
 } from 'lucide-react'
+import { toPng } from 'html-to-image'
 import { supabase } from '../lib/supabase'
 import type { TripStatus } from '../lib/types'
 
@@ -79,11 +81,22 @@ function longDate(iso: string): string {
   })
 }
 
+function fullDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('es-VE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export default function DayPlan() {
   const [date, setDate] = useState(() => localISO(new Date()))
   const [trips, setTrips] = useState<PlanTrip[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -151,13 +164,72 @@ export default function DayPlan() {
 
   const today = localISO(new Date())
 
+  /**
+   * Genera una imagen PNG del cuadro y la comparte
+   * (Web Share API en movil; descarga en escritorio).
+   */
+  async function sharePlanImage() {
+    const node = document.querySelector('.plan-sheet') as HTMLElement | null
+    if (!node || sharing) return
+    setSharing(true)
+    setError(null)
+    try {
+      const dataUrl = await toPng(node, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        cacheBust: true,
+      })
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], `planificacion-${date}.png`, {
+        type: 'image/png',
+      })
+
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Planificación ${date}`,
+            text: `Planificación del día ${fullDate(date)}`,
+          })
+        } catch (err) {
+          // el usuario cerro el dialogo de compartir: no es un error
+          if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
+        }
+      } else {
+        const a = document.createElement('a')
+        a.href = dataUrl
+        a.download = `planificacion-${date}.png`
+        a.click()
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `No se pudo generar la imagen: ${err.message}`
+          : 'No se pudo generar la imagen del plan'
+      )
+    } finally {
+      setSharing(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
         <h1>Planificación del día</h1>
-        <Link className="btn btn-primary" to={`/viajes/nuevo?date=${date}`}>
-          <Plus size={15} /> Nuevo viaje
-        </Link>
+        <div className="page-head-actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={sharePlanImage}
+            disabled={sharing || loading || trips.length === 0}
+            title="Generar una imagen del cuadro para compartirla"
+          >
+            <Share2 size={15} /> {sharing ? 'Generando…' : 'Compartir imagen'}
+          </button>
+          <Link className="btn btn-primary" to={`/viajes/nuevo?date=${date}`}>
+            <Plus size={15} /> Nuevo viaje
+          </Link>
+        </div>
       </div>
 
       {/* Navegador de fecha */}
@@ -220,7 +292,9 @@ export default function DayPlan() {
       ) : (
         <div className="plan-scroll">
           <div className="plan-sheet">
-            <div className="plan-sheet-title">OPERACIONES</div>
+            <div className="plan-sheet-title">
+              OPERACIONES · {fullDate(date)}
+            </div>
 
             {groups.map((g) => (
               <section key={g.key} className="plan-driver">
