@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Camera, Car, Pencil, Plus, Search, Trash2, UserRound, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import {
-  removeVehiclePhoto,
-  uploadVehiclePhoto,
-  vehiclePhotoUrl,
-} from '../lib/photos'
+import { removeVehiclePhoto, uploadVehiclePhoto, vehiclePhotoUrl } from '../lib/photos'
+import { useSearch } from '../search/SearchContext'
 import type { Driver, Vehicle, VehicleStatus } from '../lib/types'
 
 const EMPTY: Partial<Vehicle> = {
@@ -31,12 +28,14 @@ export default function Vehicles() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
 
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<Vehicle>>(EMPTY)
   const [saving, setSaving] = useState(false)
+
+  // Buscador global (barra superior)
+  const { query: search, setQuery } = useSearch()
 
   // Foto: archivo elegido (se sube al guardar) + preview local
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -201,14 +200,6 @@ export default function Vehicles() {
       <div className="page-head">
         <h1>Vehículos</h1>
         <div className="page-head-actions">
-          {items.length > 0 && (
-            <input
-              className="search"
-              placeholder="Buscar por placa, marca o modelo…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          )}
           <button className="btn btn-primary" onClick={openCreate}>
             <Plus size={15} /> Nuevo
           </button>
@@ -251,7 +242,7 @@ export default function Vehicles() {
           <p className="muted">
             Ningún vehículo coincide con <strong>"{search}"</strong>.
           </p>
-          <button className="btn" onClick={() => setSearch('')}>
+          <button className="btn" onClick={() => setQuery('')}>
             Limpiar búsqueda
           </button>
         </div>

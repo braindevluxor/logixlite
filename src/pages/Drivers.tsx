@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Download, Pencil, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
+import { useSearch } from '../search/SearchContext'
 import type { ApiEmployee, Branch, Driver } from '../lib/types'
 
 const EMPTY: Partial<Driver> = {
@@ -21,7 +22,9 @@ export default function Drivers() {
   const [editing, setEditing] = useState<Driver | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<Driver>>(EMPTY)
-  const [search, setSearch] = useState('')
+
+  // Buscador global (barra superior)
+  const { query: search } = useSearch()
 
   // ---- Importación desde API ----
   const [showImport, setShowImport] = useState(false)
@@ -211,13 +214,6 @@ export default function Drivers() {
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
-
-      <input
-        className="search"
-        placeholder="Buscar por nombre o cédula…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
 
       {loading ? (
         <p className="muted">Cargando…</p>

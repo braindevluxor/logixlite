@@ -3,6 +3,7 @@ import {
   Route,
   Routes,
   NavLink,
+  useLocation,
   useNavigate,
 } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -11,8 +12,10 @@ import {
   Car,
   House,
   IdCard,
+  Search,
 } from 'lucide-react'
 import { useAuth } from './auth/AuthContext'
+import { useSearch } from './search/SearchContext'
 import TotpGate from './auth/TotpGate'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -34,6 +37,16 @@ function Protected({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const { session, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { query, setQuery } = useSearch()
+
+  // Buscador global solo en las pantallas que lo usan
+  const searchPlaceholder =
+    location.pathname === '/vehiculos'
+      ? 'Buscar por placa, marca o modelo…'
+      : location.pathname === '/choferes'
+        ? 'Buscar por nombre o cédula…'
+        : null
 
   async function handleSignOut() {
     await signOut()
@@ -47,6 +60,20 @@ function Shell({ children }: { children: ReactNode }) {
           <img src="/logo-mark.png" alt="LOGIXLITE" className="brand-logo" />
           LOGIXLITE
         </span>
+
+        {searchPlaceholder && (
+          <div className="topbar-search">
+            <Search size={15} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+            />
+          </div>
+        )}
+
         <div className="topbar-right">
           <span className="user-email">{session?.user.email}</span>
           <button className="btn btn-ghost" onClick={handleSignOut}>
