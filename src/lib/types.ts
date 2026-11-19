@@ -90,6 +90,13 @@ export interface TripIncident {
   created_at: string
 }
 
+/** Ubicación del catálogo (reutilizable entre viajes) */
+export interface CatalogLocation {
+  id: number
+  name: string
+  active: boolean
+}
+
 /** Respuesta de trip_share_get (viaje completo por token) */
 export interface SharedTrip {
   trip: Trip & { share_token: string | null; status: TripStatus }

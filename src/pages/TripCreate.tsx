@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Check, ChevronDown, ChevronUp, Flag, MapPin, Search, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Flag, MapPin, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import type {
   ApiEmployee,
   Branch,
+  CatalogLocation,
   Driver,
   Trip,
   TripDestination,
@@ -70,7 +71,14 @@ export default function TripCreate() {
 
   // Destinos
   const [destinations, setDestinations] = useState<TripDestination[]>([])
-  const [destName, setDestName] = useState('')
+
+  // Catálogo de ubicaciones (reutilizables entre viajes)
+  const [catalog, setCatalog] = useState<CatalogLocation[]>([])
+  const [picker, setPicker] = useState<
+    { mode: 'trip' } | { mode: 'origin' | 'route'; dni: string } | null
+  >(null)
+  const [pickQuery, setPickQuery] = useState('')
+  const [pickBusy, setPickBusy] = useState(false)
   // Asignación pasajero (dni) → posiciones de destino [1, 2, 3...]
   const [passengerDests, setPassengerDests] = useState<Record<string, number[]>>({})
   // Origen de cada pasajero (dni) → una sola posición (1, 2, 3...)
@@ -81,7 +89,7 @@ export default function TripCreate() {
 
   useEffect(() => {
     async function load() {
-      const [b, v, d] = await Promise.all([
+      const [b, v, d, loc] = await Promise.all([
         supabase.from('branches').select('*').eq('active', true).order('name'),
         isEdit
           ? supabase.from('vehicles').select('*').order('plate')
@@ -89,6 +97,7 @@ export default function TripCreate() {
         isEdit
           ? supabase.from('drivers').select('*').order('full_name')
           : supabase.from('drivers').select('*').eq('active', true).order('full_name'),
+        supabase.from('locations').select('*').eq('active', true).order('name'),
       ])
       if (b.error || v.error || d.error) {
         setError(b.error?.message || v.error?.message || d.error?.message || null)
@@ -97,6 +106,12 @@ export default function TripCreate() {
       setBranches((b.data as Branch[]) ?? [])
       setVehicles((v.data as Vehicle[]) ?? [])
       setDrivers((d.data as Driver[]) ?? [])
+      // El catálogo es auxiliar: si falla (tabla no creada) no bloquea el viaje
+      if (loc.error) {
+        console.warn('Catálogo de ubicaciones no disponible:', loc.error.message)
+      } else {
+        setCatalog((loc.data as CatalogLocation[]) ?? [])
+      }
     }
     load()
   }, [isEdit])
@@ -369,22 +384,110 @@ export default function TripCreate() {
     setSelected((prev) => [...prev, ...additions])
   }
 
-  // ---- Destinos ----
-  function addDestination() {
-    const name = destName.trim()
+  // ---- Ubicaciones: catálogo + picker ----
+  const pickFiltered = useMemo(() => {
+    const q = pickQuery.trim().toLowerCase()
+    return catalog.filter((l) => !q || l.name.toLowerCase().includes(q))
+  }, [catalog, pickQuery])
+
+  const pickExactMatch = useMemo(
+    () =>
+      catalog.some((l) => l.name.toLowerCase() === pickQuery.trim().toLowerCase()),
+    [catalog, pickQuery]
+  )
+
+  function openPicker(mode: 'trip' | 'origin' | 'route', dni?: string) {
+    setPickQuery('')
+    setPicker(mode === 'trip' ? { mode } : { mode, dni: dni! })
+  }
+
+  /**
+   * Elige (o crea) una ubicación del catálogo y la asigna según el
+   * destino del picker: ruta del viaje, origen o ruta del pasajero.
+   */
+  async function pickLocation(rawName: string) {
+    if (pickBusy) return
+    const name = rawName.trim()
     if (!name) return
-    setDestinations((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1, // temporal, se reemplaza al guardar
-        trip_id: 0,
-        position: prev.length + 1,
-        name,
-        notes: null,
-      },
-    ])
-    setDestName('')
+    const target = picker
+    if (!target) return
+
+    setPickBusy(true)
     setError(null)
+
+    let canonical = name
+    const existing = catalog.find((l) => l.name.toLowerCase() === name.toLowerCase())
+    if (existing) {
+      canonical = existing.name
+    } else {
+      const { data, error } = await supabase
+        .from('locations')
+        .insert({ name })
+        .select('*')
+        .single()
+      if (error && error.code !== '23505') {
+        setError(error.message)
+        setPickBusy(false)
+        return
+      }
+      if (data) {
+        const loc = data as CatalogLocation
+        setCatalog((prev) =>
+          [...prev, loc].sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        )
+        canonical = loc.name
+      } else {
+        // Conflicto de unicidad: ya existía, tomar su nombre canónico
+        const { data: ex } = await supabase
+          .from('locations')
+          .select('*')
+          .ilike('name', name)
+          .maybeSingle()
+        if (ex) canonical = (ex as CatalogLocation).name
+      }
+    }
+
+    setPicker(null)
+    setPickQuery('')
+    setPickBusy(false)
+
+    // Asegurar que la ubicación exista como parada de la ruta del viaje
+    let pos = destinations.find(
+      (x) => x.name.toLowerCase() === canonical.toLowerCase()
+    )?.position
+    if (pos == null) {
+      pos = destinations.length + 1
+      const newStop: TripDestination = {
+        id: -Date.now(), // id temporal único
+        trip_id: 0,
+        position: pos,
+        name: canonical,
+        notes: null,
+      }
+      setDestinations((prev) => [...prev, newStop])
+    }
+    const stopPos = pos
+
+    if (target.mode === 'origin') {
+      setPassengerOrigin(target.dni, stopPos)
+    } else if (target.mode === 'route') {
+      setPassengerDests((prev) => {
+        const cur = prev[target.dni] ?? []
+        if (cur.includes(stopPos)) return prev
+        return { ...prev, [target.dni]: [...cur, stopPos] }
+      })
+    }
+  }
+
+  async function deleteLocation(loc: CatalogLocation) {
+    if (!confirm(`¿Eliminar "${loc.name}" del catálogo? Los viajes anteriores no se modifican.`))
+      return
+    const { error } = await supabase.from('locations').delete().eq('id', loc.id)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    setCatalog((prev) => prev.filter((l) => l.id !== loc.id))
   }
 
   function removeDestination(pos: number) {
@@ -653,6 +756,14 @@ export default function TripCreate() {
       setSaving(false)
       return
     }
+
+    // Actualizar el catálogo con las ubicaciones usadas
+    // (cubre viajes antiguos creados antes del catálogo)
+    const { error: catErr } = await supabase.from('locations').upsert(
+      destinations.map((d) => ({ name: d.name })),
+      { onConflict: 'name', ignoreDuplicates: true }
+    )
+    if (catErr) console.warn('Catálogo no actualizado:', catErr.message)
 
     // 3) Asignaciones pasajero ↔ destino (muchos a muchos)
     const passIdByDni = new Map<string, number>(
@@ -1057,242 +1168,239 @@ export default function TripCreate() {
       {/* ---------- PASO 3 ---------- */}
       {step === 3 && (
         <div className="card">
-          <div className="row gap">
-            <label className="field grow">
-              <span>Ubicación</span>
-              <input
-                value={destName}
-                onChange={(e) => setDestName(e.target.value)}
-                placeholder="ej: Terminal de pasajeros"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addDestination()
-                  }
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={addDestination}
-              disabled={!destName.trim()}
-            >
-              Agregar
-            </button>
-          </div>
+          {/* 1) RUTA DE CADA PASAJERO — directa desde el catálogo */}
+          <h2>Ruta de cada pasajero</h2>
+          <p className="muted small">
+            <strong>Origen</strong>: dónde sube (una ubicación).{' '}
+            <strong>Ubicaciones</strong>: dónde baja, en orden de bajada. Las ubicaciones
+            que crees quedan guardadas para reutilizarlas en próximos viajes.
+          </p>
 
-          {destinations.length === 0 ? (
-            <p className="muted">Agrega al menos una ubicación. El orden se respeta tal cual.</p>
-          ) : (
-            <>
-              <ol className="dest-list editable">
-                {destinations.map((d) => (
-                  <li key={d.position}>
-                    <div className="row spread gap-sm">
-                      <div>
-                        <strong>
-                          {d.position}. {d.name}
-                        </strong>
-                        {d.notes && <div className="muted small">{d.notes}</div>}
+          <div className="passenger-scroll assign-scroll">
+            <ul className="list">
+              {selected.map((p) => {
+                const assigned = passengerDests[p.dni] ?? []
+                const originPos = passengerOrigins[p.dni]
+                const missingDest = assigned.length === 0
+                const missingOrigin = originPos == null
+                return (
+                  <li key={p.dni}>
+                    <div className="assign-row">
+                      <div className="assign-head">
+                        <div>
+                          <strong>{p.full_name}</strong>
+                          <span className="muted small"> · C.I. {p.dni}</span>
+                        </div>
+                        <div className="row gap-sm">
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() => assignAllDests(p.dni)}
+                          >
+                            Todas las ubicaciones
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() => clearPassengerDests(p.dni)}
+                            disabled={assigned.length === 0}
+                          >
+                            Limpiar
+                          </button>
+                        </div>
                       </div>
-                      <div className="row gap-sm">
+
+                      {/* ORIGEN (una sola ubicación) */}
+                      <div className="assign-label">
+                        <MapPin size={13} /> Origen (sube)
+                      </div>
+                      <div className="chips">
+                        {destinations.map((d) => {
+                          const on = originPos === d.position
+                          return (
+                            <button
+                              type="button"
+                              key={`o-${d.position}`}
+                              className={`chip chip-origin ${on ? 'on' : ''}`}
+                              onClick={() =>
+                                setPassengerOrigin(p.dni, on ? null : d.position)
+                              }
+                            >
+                              {d.name}
+                            </button>
+                          )
+                        })}
                         <button
                           type="button"
-                          className="btn btn-sm"
-                          onClick={() => moveDestination(d.position, -1)}
-                          disabled={d.position === 1}
-                          aria-label="Subir"
+                          className="chip chip-add"
+                          onClick={() => openPicker('origin', p.dni)}
                         >
-                          <ChevronUp size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          onClick={() => moveDestination(d.position, 1)}
-                          disabled={d.position === destinations.length}
-                          aria-label="Bajar"
-                        >
-                          <ChevronDown size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger"
-                          onClick={() => removeDestination(d.position)}
-                          aria-label="Quitar"
-                        >
-                          <X size={14} />
+                          + Otra ubicación
                         </button>
                       </div>
+                      {missingOrigin && (
+                        <span className="assign-warning">
+                          Selecciona el origen (donde sube)
+                        </span>
+                      )}
+
+                      {/* UBICACIONES: orden de bajada */}
+                      <div className="assign-label">
+                        <Flag size={13} /> Ubicaciones (baja) — orden de bajada
+                      </div>
+
+                      {assigned.length > 0 && (
+                        <ol className="dest-seq">
+                          {assigned.map((pos, idx) => {
+                            const d = destinations.find((x) => x.position === pos)
+                            return (
+                              <li key={pos}>
+                                <span className="seq-num">{idx + 1}</span>
+                                <span className="seq-name">
+                                  {d?.name ?? `Parada ${pos}`}
+                                </span>
+                                <span className="seq-actions">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => movePassengerDest(p.dni, idx, -1)}
+                                    disabled={idx === 0}
+                                    aria-label="Subir"
+                                  >
+                                    <ChevronUp size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => movePassengerDest(p.dni, idx, 1)}
+                                    disabled={idx === assigned.length - 1}
+                                    aria-label="Bajar"
+                                  >
+                                    <ChevronDown size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => togglePassengerDest(p.dni, pos)}
+                                    aria-label="Quitar"
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </span>
+                              </li>
+                            )
+                          })}
+                        </ol>
+                      )}
+
+                      <div className="chips">
+                        {destinations
+                          .filter((d) => !assigned.includes(d.position))
+                          .map((d) => (
+                            <button
+                              type="button"
+                              key={`d-${d.position}`}
+                              className="chip chip-add"
+                              onClick={() => togglePassengerDest(p.dni, d.position)}
+                            >
+                              + {d.name}
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          className="chip chip-add chip-new"
+                          onClick={() => openPicker('route', p.dni)}
+                        >
+                          <Search size={12} /> Buscar o crear ubicación
+                        </button>
+                      </div>
+
+                      {missingDest && (
+                        <span className="assign-warning">
+                          Selecciona al menos una ubicación
+                        </span>
+                      )}
                     </div>
                   </li>
-                ))}
-              </ol>
+                )
+              })}
+            </ul>
+          </div>
 
-              {/* ---- Origen y ubicación de cada pasajero ---- */}
-              <h2>Origen y ubicación de cada pasajero</h2>
-              <p className="muted small">
-                <strong>Origen</strong>: de qué parada sube (una sola).{' '}
-                <strong>Ubicaciones</strong>: en qué paradas baja (una o varias).
-              </p>
-
-              <div className="passenger-scroll assign-scroll">
-                <ul className="list">
-                  {selected.map((p) => {
-                    const assigned = passengerDests[p.dni] ?? []
-                    const originPos = passengerOrigins[p.dni]
-                    const missingDest = assigned.length === 0
-                    const missingOrigin = originPos == null
-                    return (
-                      <li key={p.dni}>
-                        <div className="assign-row">
-                          <div className="assign-head">
-                            <div>
-                              <strong>{p.full_name}</strong>
-                              <span className="muted small"> · C.I. {p.dni}</span>
-                            </div>
-                            <div className="row gap-sm">
-                              <button
-                                type="button"
-                                className="btn btn-sm"
-                                onClick={() => assignAllDests(p.dni)}
-                              >
-                                Todas las ubicaciones
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-sm"
-                                onClick={() => clearPassengerDests(p.dni)}
-                                disabled={assigned.length === 0}
-                              >
-                                Limpiar ubicaciones
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* ORIGEN (radio: una sola parada) */}
-                          <div className="assign-label">
-                            <MapPin size={13} /> Origen (sube)
-                          </div>
-                          <div className="chips">
-                            {destinations.map((d) => {
-                              const on = originPos === d.position
-                              return (
-                                <button
-                                  type="button"
-                                  key={`o-${d.position}`}
-                                  className={`chip chip-origin ${on ? 'on' : ''}`}
-                                  onClick={() =>
-                                    setPassengerOrigin(
-                                      p.dni,
-                                      on ? null : d.position
-                                    )
-                                  }
-                                >
-                                  {d.position}. {d.name}
-                                </button>
-                              )
-                            })}
-                          </div>
-                          {missingOrigin && (
-                            <span className="assign-warning">
-                              Selecciona el origen (donde sube)
-                            </span>
-                          )}
-
-                          {/* UBICACIONES: lista ordenada + agregar */}
-                          <div className="assign-label">
-                            <Flag size={13} /> Ubicaciones (baja) — orden de bajada
-                          </div>
-
-                          {assigned.length > 0 && (
-                            <ol className="dest-seq">
-                              {assigned.map((pos, idx) => {
-                                const d = destinations.find((x) => x.position === pos)
-                                return (
-                                  <li key={pos}>
-                                    <span className="seq-num">{idx + 1}</span>
-                                    <span className="seq-name">{d?.name ?? `Parada ${pos}`}</span>
-                                    <span className="seq-actions">
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm"
-                                        onClick={() => movePassengerDest(p.dni, idx, -1)}
-                                        disabled={idx === 0}
-                                        aria-label="Subir"
-                                      >
-                                        <ChevronUp size={14} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm"
-                                        onClick={() => movePassengerDest(p.dni, idx, 1)}
-                                        disabled={idx === assigned.length - 1}
-                                        aria-label="Bajar"
-                                      >
-                                        <ChevronDown size={14} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="btn btn-sm btn-danger"
-                                        onClick={() => togglePassengerDest(p.dni, pos)}
-                                        aria-label="Quitar"
-                                      >
-                                        <X size={13} />
-                                      </button>
-                                    </span>
-                                  </li>
-                                )
-                              })}
-                            </ol>
-                          )}
-
-                          <div className="chips">
-                            {destinations
-                              .filter((d) => !assigned.includes(d.position))
-                              .map((d) => (
-                                <button
-                                  type="button"
-                                  key={`d-${d.position}`}
-                                  className="chip chip-add"
-                                  onClick={() => togglePassengerDest(p.dni, d.position)}
-                                >
-                                  + {d.name}
-                                </button>
-                              ))}
-                            {assigned.length === destinations.length &&
-                              destinations.length > 0 && (
-                                <span className="muted small">
-                                  Todas las ubicaciones asignadas.
-                                </span>
-                              )}
-                          </div>
-
-                          {missingDest && (
-                            <span className="assign-warning">
-                              Selecciona al menos una ubicación
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-
-              {(passengersWithoutDest.length > 0 || passengersWithoutOrigin.length > 0) && (
-                <div className="alert alert-error">
-                  {passengersWithoutOrigin.length > 0 && (
-                    <div>
-                      {passengersWithoutOrigin.length} pasajero(s) sin origen asignado.
-                    </div>
-                  )}
-                  {passengersWithoutDest.length > 0 && (
-                    <div>{passengersWithoutDest.length} pasajero(s) sin ubicación asignada.</div>
-                  )}
-                </div>
+          {(passengersWithoutDest.length > 0 || passengersWithoutOrigin.length > 0) && (
+            <div className="alert alert-error">
+              {passengersWithoutOrigin.length > 0 && (
+                <div>{passengersWithoutOrigin.length} pasajero(s) sin origen asignado.</div>
               )}
-            </>
+              {passengersWithoutDest.length > 0 && (
+                <div>{passengersWithoutDest.length} pasajero(s) sin ubicación asignada.</div>
+              )}
+            </div>
+          )}
+
+          {/* 2) RUTA DEL VEHÍCULO — derivada, reordenable */}
+          <h2>Ruta del vehículo</h2>
+          <p className="muted small">
+            Se arma con las rutas de los pasajeros. Puedes agregar más paradas o
+            reordenarlas; el orden es el que sigue el vehículo.
+          </p>
+
+          <button
+            type="button"
+            className="picker-trigger"
+            onClick={() => openPicker('trip')}
+          >
+            <MapPin size={15} /> Agregar ubicación a la ruta
+          </button>
+
+          {destinations.length === 0 ? (
+            <p className="muted small">
+              Aún no hay paradas. Se agregan desde las rutas de los pasajeros o con el
+              botón de arriba.
+            </p>
+          ) : (
+            <ol className="dest-list editable">
+              {destinations.map((d) => (
+                <li key={d.position}>
+                  <div className="row spread gap-sm">
+                    <div>
+                      <strong>
+                        {d.position}. {d.name}
+                      </strong>
+                      {d.notes && <div className="muted small">{d.notes}</div>}
+                    </div>
+                    <div className="row gap-sm">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => moveDestination(d.position, -1)}
+                        disabled={d.position === 1}
+                        aria-label="Subir"
+                      >
+                        <ChevronUp size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => moveDestination(d.position, 1)}
+                        disabled={d.position === destinations.length}
+                        aria-label="Bajar"
+                      >
+                        <ChevronDown size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => removeDestination(d.position)}
+                        aria-label="Quitar"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
 
           <div className="row gap">
@@ -1402,6 +1510,101 @@ export default function TripCreate() {
                   ? 'Guardar cambios'
                   : 'Crear viaje'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: picker de ubicaciones (catálogo) ===== */}
+      {picker && (
+        <div className="modal-backdrop" onClick={() => setPicker(null)}>
+          <div
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2>
+              {picker.mode === 'trip'
+                ? 'Agregar a la ruta del vehículo'
+                : picker.mode === 'origin'
+                  ? 'Origen del pasajero'
+                  : 'Ubicación del pasajero'}
+            </h2>
+            <p className="muted small">
+              Busca una ubicación guardada o crea una nueva: quedará en el catálogo para
+              reusarla en próximos viajes.
+            </p>
+
+            <label className="field">
+              <span>Buscar</span>
+              <input
+                autoFocus
+                value={pickQuery}
+                onChange={(e) => setPickQuery(e.target.value)}
+                placeholder="Escribe un nombre…"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (pickQuery.trim()) pickLocation(pickQuery)
+                  }
+                }}
+              />
+            </label>
+
+            {pickQuery.trim() && !pickExactMatch && (
+              <button
+                type="button"
+                className="btn btn-primary btn-block"
+                onClick={() => pickLocation(pickQuery)}
+                disabled={pickBusy}
+              >
+                {pickBusy
+                  ? 'Guardando…'
+                  : `Crear "${pickQuery.trim()}" y asignar`}
+              </button>
+            )}
+
+            <div className="loc-list">
+              {pickFiltered.length === 0 ? (
+                <p className="muted small">
+                  {catalog.length === 0
+                    ? 'El catálogo está vacío. Escribe un nombre arriba para crear la primera ubicación.'
+                    : 'Ninguna ubicación coincide con la búsqueda.'}
+                </p>
+              ) : (
+                pickFiltered.map((l) => (
+                  <div key={l.id} className="loc-row">
+                    <button
+                      type="button"
+                      className="loc-name"
+                      onClick={() => pickLocation(l.name)}
+                      disabled={pickBusy}
+                    >
+                      <MapPin size={14} />
+                      {l.name}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger"
+                      onClick={() => deleteLocation(l)}
+                      aria-label={`Eliminar ${l.name}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="row gap" style={{ marginTop: '0.7rem' }}>
+              <button
+                type="button"
+                className="btn grow"
+                onClick={() => setPicker(null)}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

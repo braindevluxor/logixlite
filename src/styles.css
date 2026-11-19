@@ -916,6 +916,87 @@ code {
   background: #eff6ff;
 }
 
+.chip-new {
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 700;
+}
+
+/* Botón disparador del picker de ubicaciones */
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border: 1.5px dashed var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.8rem;
+  transition: background 0.15s;
+}
+
+.picker-trigger:hover {
+  background: #dbeafe;
+}
+
+/* Lista del catálogo en el picker */
+.loc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 42vh;
+  overflow-y: auto;
+  margin-top: 0.7rem;
+}
+
+.loc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.loc-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.loc-name:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: var(--primary);
+}
+
+.loc-name:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.loc-name svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
 /* Origen en la vista del chofer */
 .origin-line {
   display: inline-flex;
