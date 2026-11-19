@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bus } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
@@ -29,9 +28,7 @@ export default function Login() {
     <div className="login-page">
       <form className="card login-card" onSubmit={onSubmit}>
         <div className="brand brand-lg">
-          <span className="brand-mark">
-            <Bus size={26} />
-          </span>{' '}
+          <img src="/logo-mark.png" alt="" className="brand-logo brand-logo-lg" />
           LOGIXLITE
         </div>
         <p className="muted">Administración de flota de transporte</p>

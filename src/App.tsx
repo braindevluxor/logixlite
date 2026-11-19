@@ -38,9 +38,7 @@ function Shell({ children }: { children: ReactNode }) {
     <div className="app">
       <header className="topbar">
         <span className="brand">
-          <span className="brand-mark">
-            <Bus size={18} />
-          </span>{' '}
+          <img src="/logo-mark.png" alt="LOGIXLITE" className="brand-logo" />
           LOGIXLITE
         </span>
         <div className="topbar-right">

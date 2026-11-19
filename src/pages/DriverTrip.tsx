@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Ban,
-  Bus,
   Check,
   CircleCheck,
   Flag,
@@ -355,9 +354,7 @@ export default function DriverTrip() {
       <div className="driver-page">
         <div className="driver-card">
           <div className="brand brand-lg">
-            <span className="brand-mark">
-              <Bus size={26} />
-            </span>{' '}
+            <img src="/logo-mark.png" alt="" className="brand-logo brand-logo-lg" />
             LOGIXLITE
           </div>
           <div className="alert alert-error">{error ?? 'Viaje no encontrado'}</div>
@@ -388,9 +385,7 @@ export default function DriverTrip() {
     <div className="driver-page">
       <header className="topbar">
         <span className="brand">
-          <span className="brand-mark">
-            <Bus size={18} />
-          </span>{' '}
+          <img src="/logo-mark.png" alt="LOGIXLITE" className="brand-logo" />
           LOGIXLITE
         </span>
         <span className={`badge badge-${trip.status}`}>{STATUS_LABEL[trip.status]}</span>

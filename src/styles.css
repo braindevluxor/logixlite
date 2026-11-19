@@ -93,6 +93,20 @@ code {
   align-items: center;
 }
 
+/* Logo de la marca (public/logo-mark.png) */
+.brand-logo {
+  height: 30px;
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+
+.brand-logo-lg {
+  height: 84px;
+  border-radius: 12px;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;

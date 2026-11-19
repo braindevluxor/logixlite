@@ -75,14 +75,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      includeAssets: ['favicon.png', 'logo-mark.png', 'icons/*.png'],
       manifest: {
         name: 'LOGIXLITE - Administración de Flota',
         short_name: 'LOGIXLITE',
         description:
           'Administración de flota de transporte particular: vehículos, choferes, pasajeros y viajes.',
         theme_color: '#0f172a',
-        background_color: '#0f172a',
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '/',
