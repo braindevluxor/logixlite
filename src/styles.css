@@ -281,6 +281,12 @@ code {
   justify-content: center;
 }
 
+/* Etiqueta emergente del menu: oculta por defecto; en escritorio
+   la barra lateral la muestra al pasar el mouse */
+.nav-tip {
+  display: none;
+}
+
 /* ===== Menu lateral de iconos (solo escritorio, >= 900px) =====
    Barra flotante vertical SOLO con iconos (el texto queda en el
    title), centrada verticalmente. En movil se mantiene la barra
@@ -327,7 +333,14 @@ code {
     border-radius: 18px;
     box-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.4);
     padding: 6px;
-    overflow-y: auto;
+    /* Sin overflow: la etiqueta emergente sale hacia la derecha
+       y no debe recortarse */
+  }
+
+  /* Iconos del menu mas grandes (26px en vez de 20px) */
+  .sidenav .nav-icon svg {
+    width: 26px;
+    height: 26px;
   }
 
   /* Solo iconos: el label se oculta visualmente pero se mantiene
@@ -346,12 +359,13 @@ code {
   }
 
   .sidenav a {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 48px;
-    height: 44px;
+    width: 52px;
+    height: 48px;
     border-radius: 13px;
     color: var(--muted);
     transition:
@@ -366,6 +380,51 @@ code {
   .sidenav a.active {
     color: var(--primary);
     background: #eff6ff;
+  }
+
+  /* ===== Etiqueta emergente al pasar el mouse =====
+     Fondo oscuro, texto blanco, flecha hacia la entrada y
+     animacion de deslizamiento + fundido */
+  .sidenav .nav-tip {
+    display: inline-block;
+    position: absolute;
+    left: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-6px);
+    padding: 0.4rem 0.7rem;
+    background: #0f172a;
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    border-radius: 9px;
+    box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.16s ease,
+      transform 0.16s ease;
+    z-index: 40;
+  }
+
+  /* Flecha (rombo) que apunta a la barra */
+  .sidenav .nav-tip::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: #0f172a;
+    border-radius: 2px;
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  .sidenav a:hover .nav-tip,
+  .sidenav a:focus-visible .nav-tip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
   }
 
   /* En escritorio el menu es lateral: la barra inferior no aplica */

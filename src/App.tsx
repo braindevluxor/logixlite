@@ -84,13 +84,16 @@ function Shell({ children }: { children: ReactNode }) {
       key={to}
       to={to}
       end={end}
-      title={label}
       className={({ isActive }) => (isActive ? 'active' : '')}
     >
       <span className="nav-icon">
         <Icon size={20} />
       </span>
       <span className="nav-label">{label}</span>
+      {/* Etiqueta emergente: solo se estiliza en la barra lateral */}
+      <span className="nav-tip" aria-hidden="true">
+        {label}
+      </span>
     </NavLink>
   ))
 
