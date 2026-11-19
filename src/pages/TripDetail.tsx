@@ -486,7 +486,7 @@ export default function TripDetail() {
 
                   {trip.status === 'programado' && (
                     <a
-                      className="btn btn-sm btn-primary notify-btn"
+                      className="btn btn-sm btn-whatsapp notify-btn"
                       href={waUrl(passengerMessage(p), p.phone)}
                       target="_blank"
                       rel="noreferrer"

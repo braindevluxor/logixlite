@@ -2458,3 +2458,20 @@ code {
   white-space: nowrap;
   align-self: center;
 }
+
+/* Verde WhatsApp para el boton de notificar */
+.btn-whatsapp {
+  background: #25d366;
+  border-color: #25d366;
+  color: #fff;
+}
+
+.btn-whatsapp:hover:not(:disabled) {
+  background: #1ebd5a;
+  border-color: #1ebd5a;
+}
+
+.btn-whatsapp:focus-visible {
+  outline: 2px solid #128c7e;
+  outline-offset: 1px;
+}
