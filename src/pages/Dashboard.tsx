@@ -37,6 +37,8 @@ interface PendingTrip {
   vehicle: { plate: string; brand: string | null; model: string | null } | null
   driver: { full_name: string } | null
   branch: { name: string } | null
+  /** Avance: traslados finalizados / totales (pasajero ↔ destino) */
+  progress: { done: number; total: number }
 }
 
 const COLORS = [
@@ -286,9 +288,44 @@ export default function Dashboard() {
 
     if (error) {
       setPendingError(error.message)
-    } else {
-      setPendingTrips((data as unknown as PendingTrip[]) ?? [])
+      setPendingLoading(false)
+      return
     }
+
+    const rows = (data as unknown as PendingTrip[]) ?? []
+
+    // ---- Avance de traslados por viaje ----
+    const progress = new Map<number, { done: number; total: number }>()
+    if (rows.length > 0) {
+      const { data: passData, error: pErr } = await supabase
+        .from('trip_passengers')
+        .select('trip_id, trip_passenger_destinations(arrived_at)')
+        .in(
+          'trip_id',
+          rows.map((t) => t.id)
+        )
+
+      if (pErr) {
+        setPendingError(pErr.message)
+        setPendingLoading(false)
+        return
+      }
+
+      for (const p of (passData ?? []) as {
+        trip_id: number
+        trip_passenger_destinations: { arrived_at: string | null }[] | null
+      }[]) {
+        const links = p.trip_passenger_destinations ?? []
+        const cur = progress.get(p.trip_id) ?? { done: 0, total: 0 }
+        cur.total += links.length
+        cur.done += links.filter((l) => l.arrived_at != null).length
+        progress.set(p.trip_id, cur)
+      }
+    }
+
+    setPendingTrips(
+      rows.map((t) => ({ ...t, progress: progress.get(t.id) ?? { done: 0, total: 0 } }))
+    )
     setPendingLoading(false)
   }
 
@@ -541,36 +578,64 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="pending-list">
-                {pendingTrips.map((t) => (
-                  <Link
-                    key={t.id}
-                    to={`/viajes/${t.id}`}
-                    className="pending-row"
-                    onClick={() => setShowPending(false)}
-                  >
-                    <div className="pending-main">
-                      <strong>
-                        {t.vehicle?.plate ?? '—'}
-                        {t.branch?.name ? ` → ${t.branch.name}` : ''}
-                      </strong>
-                      <span className="muted small">
-                        {new Date(t.departure_at).toLocaleString('es-VE', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        })}
-                        {' · '}
-                        {t.driver?.full_name ?? 'Sin chofer'}
-                      </span>
-                      {t.notes && <span className="pending-notes">{t.notes}</span>}
-                    </div>
-                    <div className="pending-side">
-                      <span className={`badge badge-${t.status}`}>
-                        {t.status === 'programado' ? 'Programado' : 'En curso'}
-                      </span>
-                      <ArrowRight size={16} className="pending-arrow" />
-                    </div>
-                  </Link>
-                ))}
+                {pendingTrips.map((t) => {
+                  const { done, total } = t.progress
+                  const pctTrip = total > 0 ? Math.round((done / total) * 100) : 0
+                  const pending = total - done
+                  return (
+                    <Link
+                      key={t.id}
+                      to={`/viajes/${t.id}`}
+                      className="pending-row"
+                      onClick={() => setShowPending(false)}
+                    >
+                      <div className="pending-main">
+                        <strong>
+                          {t.vehicle?.plate ?? '—'}
+                          {t.branch?.name ? ` → ${t.branch.name}` : ''}
+                        </strong>
+                        <span className="muted small">
+                          {new Date(t.departure_at).toLocaleString('es-VE', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                          {' · '}
+                          {t.driver?.full_name ?? 'Sin chofer'}
+                        </span>
+                        {t.notes && <span className="pending-notes">{t.notes}</span>}
+
+                        {/* Avance de traslados */}
+                        <span className="pending-progress">
+                          <span className="progress-track">
+                            <span
+                              className={`progress-fill ${
+                                pctTrip === 100 ? 'complete' : 'partial'
+                              }`}
+                              style={{ width: `${pctTrip}%` }}
+                            />
+                          </span>
+                          <span className="progress-text">
+                            <strong>
+                              {done}/{total}
+                            </strong>{' '}
+                            traslados
+                            {pending > 0 ? (
+                              <em className="progress-pend"> · {pending} pendiente(s)</em>
+                            ) : (
+                              <em className="progress-done"> · ¡completado!</em>
+                            )}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="pending-side">
+                        <span className={`badge badge-${t.status}`}>
+                          {t.status === 'programado' ? 'Programado' : 'En curso'}
+                        </span>
+                        <ArrowRight size={16} className="pending-arrow" />
+                      </div>
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>

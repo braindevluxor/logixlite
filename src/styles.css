@@ -1725,6 +1725,60 @@ code {
   pointer-events: none;
 }
 
+/* ---- Avance de traslados en el modal ---- */
+.pending-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.progress-track {
+  display: block;
+  height: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.progress-fill.partial {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.progress-fill.complete {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.progress-text {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.progress-text strong {
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.progress-pend {
+  color: var(--warn);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.progress-done {
+  color: var(--ok);
+  font-style: normal;
+  font-weight: 700;
+}
+
 .sk-chip {
   width: 42px;
   height: 42px;
