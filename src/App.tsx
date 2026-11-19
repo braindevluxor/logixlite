@@ -78,29 +78,26 @@ function Shell({ children }: { children: ReactNode }) {
     navigate('/login', { replace: true })
   }
 
-  // Mismo listado para el menu lateral y el inferior
+  // Mismo listado para el menu lateral (solo iconos) y el inferior
   const navLinks = NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
     <NavLink
       key={to}
       to={to}
       end={end}
+      title={label}
       className={({ isActive }) => (isActive ? 'active' : '')}
     >
       <span className="nav-icon">
         <Icon size={20} />
       </span>
-      {label}
+      <span className="nav-label">{label}</span>
     </NavLink>
   ))
 
   return (
     <div className="app">
-      {/* Menu lateral flotante: visible solo en escritorio (>= 900px) */}
+      {/* Menu lateral de iconos: visible solo en escritorio (>= 900px) */}
       <nav className="sidenav" aria-label="Menú principal">
-        <span className="brand">
-          <img src="/logo-mark.png" alt="" className="brand-logo" />
-          LOGIXLITE
-        </span>
         {navLinks}
       </nav>
 
