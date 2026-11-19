@@ -23,6 +23,12 @@ interface PassRow {
   department: string | null
 }
 
+/** Filas de trip_passenger_destinations con destino y viaje embebidos */
+interface DestLinkRow {
+  trip_destination: { name: string } | null
+  trip_passengers: { trip_id: number } | null
+}
+
 interface DeptStat {
   name: string
   count: number
@@ -178,24 +184,15 @@ export default function Dashboard() {
       const fromIso = new Date(`${from}T00:00:00`).toISOString()
       const toIso = new Date(`${to}T23:59:59.999`).toISOString()
 
-      const [{ data: tripData, error: tripErr }, { data: stopData, error: stopErr }] =
-        await Promise.all([
-          supabase
-            .from('trips')
-            .select('id, status')
-            .gte('departure_at', fromIso)
-            .lte('departure_at', toIso),
-          // Paradas de los viajes del rango (viajes!inner = solo viajes que cumplen)
-          supabase
-            .from('trip_destinations')
-            .select('name, trip_id, trips!inner(departure_at)')
-            .gte('trips.departure_at', fromIso)
-            .lte('trips.departure_at', toIso),
-        ])
+      const { data: tripData, error: tripErr } = await supabase
+        .from('trips')
+        .select('id, status')
+        .gte('departure_at', fromIso)
+        .lte('departure_at', toIso)
 
-      if (tripErr || stopErr) {
+      if (tripErr) {
         if (!cancelled) {
-          setError(tripErr?.message || stopErr?.message || 'Error al cargar el plan')
+          setError(tripErr.message)
           setLoading(false)
         }
         return
@@ -203,28 +200,51 @@ export default function Dashboard() {
 
       const ids = (tripData ?? []).map((t) => t.id)
       let passData: PassRow[] = []
+      let stopLinks: DestLinkRow[] = []
 
       if (ids.length > 0) {
-        const { data, error } = await supabase
-          .from('trip_passengers')
-          .select('dni, full_name, department')
-          .in('trip_id', ids)
-        if (error) {
+        const [passRes, stopRes] = await Promise.all([
+          supabase
+            .from('trip_passengers')
+            .select('dni, full_name, department')
+            .in('trip_id', ids),
+          // Solo DESTINOS marcados por pasajeros: una ubicacion que es
+          // solo ORIGEN no aparece aqui y por tanto no se cuenta
+          supabase
+            .from('trip_passenger_destinations')
+            .select(
+              'trip_destination:trip_destinations(name), trip_passengers!inner(trip_id)'
+            )
+            .in('trip_passengers.trip_id', ids),
+        ])
+        if (passRes.error || stopRes.error) {
           if (!cancelled) {
-            setError(error.message)
+            setError(
+              passRes.error?.message || stopRes.error?.message || 'Error al cargar el plan'
+            )
             setLoading(false)
           }
           return
         }
-        passData = (data as PassRow[]) ?? []
+        passData = (passRes.data as PassRow[]) ?? []
+        // PostgREST devuelve objetos (many-to-one); el tipo inferido
+        // por supabase-js declara arrays, por eso el doble cast
+        stopLinks = (stopRes.data as unknown as DestLinkRow[]) ?? []
       }
 
       if (!cancelled) {
         setTrips((tripData as TripRow[]) ?? [])
         setPassengers(passData)
-        setStopRows(
-          ((stopData ?? []) as { name: string; trip_id: number }[])
-        )
+
+        // Agrupa destinos por nombre y viaje (3 pasajeros al mismo
+        // destino en un viaje = 1 entrada para ese viaje)
+        const rows: { name: string; trip_id: number }[] = []
+        for (const r of stopLinks) {
+          const name = r.trip_destination?.name?.trim()
+          const tripId = r.trip_passengers?.trip_id
+          if (name && tripId != null) rows.push({ name, trip_id: tripId })
+        }
+        setStopRows(rows)
         setLoading(false)
       }
     }
@@ -572,8 +592,8 @@ export default function Dashboard() {
               <div>
                 <h2 className="chart-title">Paradas / destinos del período</h2>
                 <p className="chart-sub">
-                  {stopStats.uniqueCount} parada(s) única(s) · cada parada cuenta 1 vez
-                  aunque vayan varios pasajeros
+                  {stopStats.uniqueCount} parada(s) única(s) · solo destinos marcados por
+                  pasajeros; los orígenes no cuentan
                 </p>
               </div>
               <span className="chart-badge">
@@ -584,7 +604,7 @@ export default function Dashboard() {
             {stopStats.uniqueCount === 0 ? (
               <div className="chart-empty">
                 <Route size={28} />
-                <p>No hay paradas registradas en el rango de fechas.</p>
+                <p>No hay destinos marcados en el rango de fechas.</p>
               </div>
             ) : (
               <div className="chart-grid">
