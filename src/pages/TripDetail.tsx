@@ -7,7 +7,9 @@ import {
   Link2,
   MapPin,
   Pencil,
+  Send,
   Share2,
+  X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type {
@@ -61,6 +63,10 @@ export default function TripDetail() {
   const [incidents, setIncidents] = useState<IncidentRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Avisos a pasajeros (WhatsApp)
+  const [notifyOpen, setNotifyOpen] = useState(false)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const [t, p, d, i] = await Promise.all([
@@ -208,6 +214,56 @@ export default function TripDetail() {
     )
   }
 
+  /** Mensaje de aviso personalizado por pasajero */
+  const passengerMessage = (p: TripPassenger): string => {
+    const origin = p.origin_destination_id
+      ? destinations.find((d) => d.id === p.origin_destination_id)?.name
+      : null
+
+    // Destinos del pasajero en SU orden de bajada (seq)
+    const passLinks = links
+      .filter((l) => l.trip_passenger_id === p.id)
+      .sort((a, b) => (a.seq ?? 999) - (b.seq ?? 999))
+    const destNames = passLinks
+      .map((l) => destinations.find((d) => d.id === l.trip_destination_id)?.name)
+      .filter((n): n is string => !!n)
+    const destStr =
+      destNames.length > 0
+        ? destNames.join(', ')
+        : destinations.map((d) => d.name).join(', ') || '—'
+
+    const dep = new Date(trip.departure_at)
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const dateStr = `${dep.getFullYear()}-${p2(dep.getMonth() + 1)}-${p2(dep.getDate())}`
+    const timeStr = `${p2(dep.getHours())}:${p2(dep.getMinutes())}`
+
+    return [
+      `Hola ${p.full_name}, tienes un viaje programado:`,
+      '',
+      `- Origen: ${origin ?? '—'}`,
+      `- Destino(s): ${destStr}`,
+      `- Fecha y Hora: ${dateStr} a las ${timeStr}`,
+      `- Vehículo: ${trip.vehicle?.plate ?? '—'}`,
+      `- Conductor: ${trip.driver?.full_name ?? '—'}${
+        trip.driver?.phone ? ` (Tel: ${trip.driver.phone})` : ''
+      }`,
+    ].join('\n')
+  }
+
+  function waUrl(msg: string): string {
+    return `https://wa.me/?text=${encodeURIComponent(msg)}`
+  }
+
+  async function copyMsg(p: TripPassenger) {
+    try {
+      await navigator.clipboard.writeText(passengerMessage(p))
+      setCopiedId(p.id)
+      window.setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      setError('No se pudo copiar el mensaje')
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -283,6 +339,27 @@ export default function TripDetail() {
               : 'Este viaje no tiene link (falta regenerar share_token).'}
           </p>
         </div>
+
+        {trip.status === 'programado' && passengers.length > 0 && (
+          <div className="share-box">
+            <div className="row spread wrap gap-sm">
+              <strong className="share-title">
+                <Send size={16} /> Avisar a los pasajeros
+              </strong>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => setNotifyOpen(true)}
+              >
+                Abrir avisos
+              </button>
+            </div>
+            <p className="muted small" style={{ margin: '0.4rem 0 0' }}>
+              Genera el mensaje de cada pasajero (origen, destinos, fecha, vehículo y
+              conductor) listo para enviar por WhatsApp.
+            </p>
+          </div>
+        )}
 
         <div className="row gap wrap">
           {trip.status === 'programado' && (
@@ -461,6 +538,78 @@ export default function TripDetail() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* ===== Modal: avisar a los pasajeros ===== */}
+      {notifyOpen && (
+        <div className="modal-backdrop" onClick={() => setNotifyOpen(false)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Avisar a los pasajeros"
+          >
+            <div className="modal-head">
+              <div>
+                <h2>
+                  <Send size={18} /> Avisar a los pasajeros
+                </h2>
+                <p className="muted small">
+                  WhatsApp se abre con el mensaje listo: elige el contacto y envía.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setNotifyOpen(false)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="notify-list">
+              {passengers.map((p) => {
+                const msg = passengerMessage(p)
+                return (
+                  <div key={p.id} className="notify-row">
+                    <div className="notify-main">
+                      <strong>{p.full_name}</strong>
+                      <pre className="notify-msg">{msg}</pre>
+                    </div>
+                    <div className="notify-actions">
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => copyMsg(p)}
+                        title="Copiar el mensaje"
+                      >
+                        {copiedId === p.id ? (
+                          <>
+                            <Check size={14} /> Copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} /> Copiar
+                          </>
+                        )}
+                      </button>
+                      <a
+                        className="btn btn-sm btn-primary"
+                        href={waUrl(msg)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Send size={14} /> WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ===== Modal: cancelar con motivo ===== */}

@@ -2451,3 +2451,48 @@ code {
   padding: 0.2rem 0.5rem;
   display: inline-block;
 }
+
+/* ===== Avisos a pasajeros (WhatsApp) ===== */
+.notify-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.notify-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+}
+
+.notify-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.notify-msg {
+  margin: 0.4rem 0 0;
+  font-family: inherit;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  color: var(--muted);
+}
+
+.notify-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
