@@ -200,19 +200,20 @@ export default function Vehicles() {
     <div className="page">
       <div className="page-head">
         <h1>Vehículos</h1>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <Plus size={15} /> Nuevo
-        </button>
+        <div className="page-head-actions">
+          {items.length > 0 && (
+            <input
+              className="search"
+              placeholder="Buscar por placa, marca o modelo…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          )}
+          <button className="btn btn-primary" onClick={openCreate}>
+            <Plus size={15} /> Nuevo
+          </button>
+        </div>
       </div>
-
-      {items.length > 0 && (
-        <input
-          className="search"
-          placeholder="Buscar por placa, marca o modelo…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      )}
 
       {error && !showForm && <div className="alert alert-error">{error}</div>}
 
