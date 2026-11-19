@@ -1,0 +1,1337 @@
+﻿/* ===== LOGIXLITE - estilos ===== */
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
+}
+h2 {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+code {
+  background: var(--border);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* ===== Layout ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1rem;
+  background: #0f172a;
+  color: #fff;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.brand-lg {
+  font-size: 1.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.brand-mark {
+  color: #38bdf8;
+  display: inline-flex;
+  align-items: center;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.user-email {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  max-width: 45vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding-bottom: 5rem;
+}
+
+.bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottomnav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0.2rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.bottomnav a.active {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page {
+  padding: 1rem;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.loading-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  color: var(--muted);
+}
+
+/* ===== Componentes ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-num {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stat-ok {
+  color: var(--ok);
+}
+
+.stat-pend {
+  color: var(--warn);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 0.15rem;
+}
+
+.stat .muted.small {
+  display: block;
+  margin-top: 0.1rem;
+  line-height: 1.3;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn svg {
+  flex-shrink: 0;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: #fecaca;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: #334155;
+  color: #e2e8f0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.btn-sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.row.gap {
+  gap: 0.6rem;
+}
+.row.gap-sm {
+  gap: 0.35rem;
+}
+.row.wrap {
+  flex-wrap: wrap;
+}
+.row.spread {
+  justify-content: space-between;
+}
+.grow {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 0.8rem;
+}
+.block {
+  display: block;
+}
+
+.alert {
+  padding: 0.6rem 0.8rem;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  margin-bottom: 0.8rem;
+}
+
+.alert-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--danger);
+}
+
+.alert-warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+/* Sucursal de origen del pasajero en la lista */
+.branch-tag {
+  display: inline-block;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ===== Listas ===== */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  color: inherit;
+}
+
+.list-item-actions {
+  flex-wrap: wrap;
+}
+
+/* ===== Badges ===== */
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.badge-activo,
+.badge-programado {
+  background: #dcfce7;
+  color: var(--ok);
+}
+.badge-en_curso {
+  background: #dbeafe;
+  color: var(--primary);
+}
+.badge-finalizado {
+  background: #e2e8f0;
+  color: var(--muted);
+}
+.badge-cancelado,
+.badge-inactivo,
+.badge-mantenimiento {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+/* ===== Formularios ===== */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea,
+.search input {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.search input:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: var(--primary);
+}
+
+.search {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+}
+
+/* ===== Modal ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: end center;
+  z-index: 50;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .modal-backdrop {
+    place-items: center;
+    padding: 1rem;
+  }
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 92vh;
+  overflow-y: auto;
+  margin: 0;
+  border-radius: 16px 16px 0 0;
+}
+
+@media (min-width: 640px) {
+  .modal {
+    border-radius: 16px;
+  }
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+/* ===== Login ===== */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, #0f172a, #1e3a8a);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* ===== Stepper ===== */
+.stepper {
+  list-style: none;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+}
+
+.stepper li {
+  flex: 1;
+  min-width: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.66rem;
+  color: var(--muted);
+  cursor: default;
+}
+
+.stepper li.done {
+  cursor: pointer;
+  color: var(--ok);
+}
+
+.stepper li.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.stepper .dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.stepper li.active .dot {
+  background: var(--primary);
+  color: #fff;
+}
+
+.stepper li.done .dot {
+  background: var(--ok);
+  color: #fff;
+}
+
+.step-label {
+  text-align: center;
+}
+
+/* ===== Opciones (vehÃ­culo / chofer) ===== */
+.field > span {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+  text-align: left;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.option.selected {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+.capacity-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.12rem 0.5rem;
+}
+
+.capacity-pill.over {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
+/* ===== Pasajeros ===== */
+.checkbox-list li {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.check-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.check-row.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.check-row input {
+  margin-top: 0.2rem;
+}
+
+.import-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+/* Separador de grupos en la lista de pasajeros */
+.list-divider {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  padding: 0.3rem 0.6rem;
+  margin: 0.4rem 0 0.15rem;
+}
+
+/* Fila de pasajero ya seleccionado */
+.check-row.is-selected {
+  background: #eff6ff;
+}
+
+.check-row.is-selected strong {
+  color: var(--primary-dark);
+}
+
+/* Pista de búsqueda vacía en el paso 2 */
+.search-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.search-hint svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+/* Lista de pasajeros del paso 2: altura fija con scroll propio
+   para que los botones de navegaciÃ³n siempre queden visibles */
+.passenger-scroll {
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-top: 0.6rem;
+  padding-right: 2px;
+  overscroll-behavior: contain;
+}
+
+.passenger-scroll .checkbox-list li:last-child {
+  margin-bottom: 0.25rem;
+}
+
+/* ---- AsignaciÃ³n pasajero â†’ destinos (paso 3) ---- */
+.assign-scroll {
+  max-height: 40vh;
+}
+
+.assign-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.assign-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.45rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.chip {
+  border: 1.5px solid var(--border);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip.on {
+  background: #eff6ff;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Chip de origen (verde, distinto de los destinos) */
+.chip-origin {
+  border-style: dashed;
+}
+
+.chip-origin.on {
+  background: #f0fdf4;
+  border-color: var(--ok);
+  border-style: solid;
+  color: var(--ok);
+}
+
+.assign-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin: 0.55rem 0 0.3rem;
+}
+
+.assign-label + .chips + .assign-warning {
+  margin-top: 0.35rem;
+}
+
+/* ---- Lista ordenada de bajada por pasajero ---- */
+.dest-seq {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dest-seq li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #eff6ff;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+}
+
+.seq-num {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.seq-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seq-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.seq-actions .btn {
+  padding: 0.25rem 0.45rem;
+}
+
+/* Chip "+ agregar" para ubicaciones pendientes */
+.chip-add {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.chip-add:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #eff6ff;
+}
+
+/* Origen en la vista del chofer */
+.origin-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.assign-warning {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+/* ---- Novedades bajo cada pasajero ---- */
+.pass-incidents {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pass-incidents li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 7px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.pass-incidents li svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--warn);
+}
+
+.pass-incidents .muted {
+  color: #b45309;
+  font-weight: 400;
+}
+
+.dest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+/* ===== Vista del chofer (link pÃºblico) ===== */
+.driver-page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.driver-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1rem;
+  padding-bottom: 3rem;
+}
+
+.driver-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.driver-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+}
+
+.driver-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.driver-progress {
+  margin-top: 0.9rem;
+}
+
+.progress-bar {
+  height: 10px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #38bdf8);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.driver-dest-title {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.driver-pass {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.driver-pass.arrived {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.driver-pass .btn {
+  white-space: nowrap;
+}
+
+.pass-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.btn-novedad {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: var(--warn);
+}
+
+.btn-arrived {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: var(--ok);
+}
+
+.driver-foot {
+  text-align: center;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #fff;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+  z-index: 100;
+  animation: toast-in 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 90vw;
+}
+
+.toast svg {
+  flex-shrink: 0;
+  color: #4ade80;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ===== Box de compartir en el detalle ===== */
+.share-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.share-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--primary);
+}
+
+.chip-check {
+  flex-shrink: 0;
+}
+
+.track-km-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ---- Caja "Iniciar viaje" en el link del chofer ---- */
+.start-box {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border);
+}
+
+.start-hint {
+  margin: 0 0 0.6rem;
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+
+/* ---- Cancelar viaje desde el link del chofer ---- */
+.cancel-box {
+  margin-top: 0.7rem;
+}
+
+/* ===== Modal de llegada: GPS + KM ===== */
+.geo-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-radius: 9px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.geo-box.geo-loading {
+  color: var(--primary);
+}
+
+.geo-box.geo-ok {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: var(--ok);
+}
+
+.geo-box.geo-error {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: var(--warn);
+}
+
+.geo-box span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.km-check {
+  align-items: flex-start;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  padding: 0.6rem 0.75rem;
+}
+
+.km-check input {
+  margin-top: 0.2rem;
+}
+
+.chip-maps {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Número de orden de bajada en los chips */
+.seq-mini {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ===== Destinos ===== */
+.dest-list {
+  margin: 0 0 1rem;
+  padding-left: 1.3rem;
+}
+
+.dest-list li {
+  margin-bottom: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+}
+
+.dest-list.editable {
+  list-style: none;
+  padding-left: 0;
+}
+
+/* ===== Detalle viaje ===== */
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.8rem 0;
+  font-size: 0.9rem;
+}
+
+.kv dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.kv dd {
+  margin: 0;
+}
+
+.passenger-summary {
+  margin-bottom: 1rem;
+}
+
+.passenger-summary summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+/* ===== Segmentado ===== */
+.seg {
+  display: flex;
+  background: var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 1rem;
+  gap: 3px;
+}
+
+.seg button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.45rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.seg button.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* ===== Dashboard: filtro de fechas ===== */
+.date-filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.date-filter .field {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 150px;
+}
+
+.date-filter-icon {
+  color: var(--primary);
+  margin-bottom: 0.55rem;
+  flex-shrink: 0;
+}
+
+/* ===== Dashboard: gráfico de torta ===== */
+.chart-card {
+  overflow: visible;
+}
+
+.chart-grid {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.donut-wrap {
+  flex: 0 0 auto;
+  width: 230px;
+  max-width: 100%;
+}
+
+.donut {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.donut-center-num {
+  font-size: 34px;
+  font-weight: 800;
+  fill: var(--text);
+}
+
+.donut-center-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--muted);
+}
+
+.donut-center-dept {
+  font-size: 10px;
+  fill: var(--muted);
+}
+
+.chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 7px;
+}
+
+.chart-legend li:hover {
+  background: var(--bg);
+}
+
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-name {
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-sub {
+  margin-top: -0.3rem;
+  margin-bottom: 0.8rem;
+  line-height: 1.4;
+}
+
+.legend-count {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
