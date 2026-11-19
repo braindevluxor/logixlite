@@ -12,6 +12,7 @@ import {
   TriangleExclamationPoint,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
 import type {
   SharedTrip,
   TripPassengerDestination,
@@ -520,7 +521,7 @@ export default function DriverTrip() {
         {byDest.map(({ dest, items }) => (
           <div className="driver-card" key={dest.id}>
             <h2 className="driver-dest-title">
-              {dest.position}. {dest.name}
+              {dest.position}. {up(dest.name)}
               {dest.notes && <span className="muted small"> — {dest.notes}</span>}
             </h2>
             {items.length === 0 ? (
@@ -553,7 +554,7 @@ export default function DriverTrip() {
                           </div>
                           {originName && (
                             <div className="origin-line">
-                              <MapPin size={13} /> Sube en: <strong>{originName}</strong>
+                              <MapPin size={13} /> Sube en: <strong>{up(originName)}</strong>
                             </div>
                           )}
                           {arrived && mapsUrl && (

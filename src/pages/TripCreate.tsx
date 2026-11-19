@@ -14,6 +14,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
+import { up } from '../lib/format'
 import type {
   ApiEmployee,
   Branch,
@@ -1343,7 +1344,7 @@ export default function TripCreate() {
                                 setPassengerOrigin(p.dni, on ? null : d.position)
                               }
                             >
-                              {d.name}
+                              {up(d.name)}
                             </button>
                           )
                         })}
@@ -1374,7 +1375,7 @@ export default function TripCreate() {
                               <li key={pos}>
                                 <span className="seq-num">{idx + 1}</span>
                                 <span className="seq-name">
-                                  {d?.name ?? `Parada ${pos}`}
+                                  {d ? up(d.name) : `Parada ${pos}`}
                                 </span>
                                 <span className="seq-actions">
                                   <button
@@ -1420,7 +1421,7 @@ export default function TripCreate() {
                               className="chip chip-add"
                               onClick={() => togglePassengerDest(p.dni, d.position)}
                             >
-                              + {d.name}
+                              + {up(d.name)}
                             </button>
                           ))}
                         <button
@@ -1497,7 +1498,7 @@ export default function TripCreate() {
                   <div className="row spread gap-sm">
                     <div>
                       <strong>
-                        {d.position}. {d.name}
+                        {d.position}. {up(d.name)}
                       </strong>
                       {d.notes && <div className="muted small">{d.notes}</div>}
                     </div>
@@ -1576,7 +1577,11 @@ export default function TripCreate() {
             <dt>Kilometraje</dt>
             <dd>{trackKm ? 'Sí — el chofer registrará KM en cada llegada' : 'No'}</dd>
             <dt>Ubicaciones</dt>
-            <dd>{destinations.map((d) => `${d.position}. ${d.name}`).join(' → ')}</dd>
+            <dd>
+              {destinations
+                .map((d) => `${d.position}. ${up(d.name)}`)
+                .join(' → ')}
+            </dd>
             {notes && (
               <>
                 <dt>Notas</dt>
@@ -1591,7 +1596,9 @@ export default function TripCreate() {
               {selected.map((p) => {
                 const positions = passengerDests[p.dni] ?? []
                 const names = positions.map(
-                  (pos) => destinations.find((d) => d.position === pos)?.name ?? pos
+                  (pos) =>
+                    destinations.find((d) => d.position === pos)?.name ??
+                    `Parada ${pos}`
                 )
                 const originPos = passengerOrigins[p.dni]
                 const originName =
@@ -1608,14 +1615,15 @@ export default function TripCreate() {
                       </div>
                       <div className="dest-tags">
                         <span className={`chip chip-origin ${originName ? 'on' : ''}`}>
-                          <MapPin size={12} /> {originName ?? 'Sin origen'}
+                          <MapPin size={12} />{' '}
+                          {originName ? up(originName) : 'Sin origen'}
                         </span>
                         {names.length === 0 ? (
                           <span className="assign-warning">Sin ubicación</span>
                         ) : (
                           names.map((n, i) => (
                             <span key={i} className="chip on">
-                              <Flag size={12} /> {n}
+                              <Flag size={12} /> {up(n)}
                             </span>
                           ))
                         )}
@@ -1791,7 +1799,7 @@ export default function TripCreate() {
                       disabled={pickBusy}
                     >
                       <MapPin size={14} />
-                      {l.name}
+                      {up(l.name)}
                     </button>
                     <button
                       type="button"

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
 import type { TripStatus } from '../lib/types'
 
 interface PlanPassenger {
@@ -156,9 +157,10 @@ export default function DayPlan() {
     const names = links
       .map((l) => idToName.get(l.trip_destination_id))
       .filter((n): n is string => !!n)
+      .map((n) => up(n))
     if (names.length > 0) return names.join(' → ')
     if (t.trip_destinations.length > 0)
-      return t.trip_destinations.map((d) => d.name).join(' / ')
+      return t.trip_destinations.map((d) => up(d.name)).join(' / ')
     return '—'
   }
 

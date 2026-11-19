@@ -11,6 +11,7 @@ import {
   Share2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
 import type {
   Branch,
   Driver,
@@ -387,7 +388,7 @@ export default function TripDetail() {
             )
             return (
               <li key={d.id}>
-                <strong>{d.name}</strong>
+                <strong>{up(d.name)}</strong>
                 {d.notes && <div className="muted small">{d.notes}</div>}
                 <div className="dest-tags">
                   {inDest.length === 0 ? (
@@ -440,7 +441,8 @@ export default function TripDetail() {
                     )}
                     <div className="dest-tags">
                       <span className={`chip chip-origin ${originName ? 'on' : ''}`}>
-                        <MapPin size={12} /> {originName ?? 'Sin origen'}
+                        <MapPin size={12} />{' '}
+                        {originName ? up(originName) : 'Sin origen'}
                       </span>
                       {destNames.length === 0 ? (
                         <span className="assign-warning">Sin ubicación</span>
@@ -459,7 +461,7 @@ export default function TripDetail() {
                           return (
                             <span key={i} className="chip on">
                               <span className="seq-mini">{i + 1}</span>
-                              {n}
+                              {up(n)}
                               {link?.arrived_at &&
                                 ` · ${new Date(link.arrived_at).toLocaleTimeString('es-VE', {
                                   hour: '2-digit',
