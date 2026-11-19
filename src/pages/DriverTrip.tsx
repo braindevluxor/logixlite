@@ -385,7 +385,11 @@ export default function DriverTrip() {
     <div className="driver-page">
       <header className="topbar">
         <span className="brand">
-          <img src="/logo-mark.png" alt="LOGIXLITE" className="brand-logo" />
+          <img
+            src="/logo-white.webp"
+            alt="LOGIXLITE"
+            className="brand-logo brand-logo-white"
+          />
           LOGIXLITE
         </span>
         <span className={`badge badge-${trip.status}`}>{STATUS_LABEL[trip.status]}</span>
