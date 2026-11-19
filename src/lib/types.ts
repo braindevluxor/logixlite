@@ -21,6 +21,8 @@ export interface Vehicle {
   status: VehicleStatus
   notes: string | null
   default_driver_id: number | null
+  /** Ruta de la foto en el bucket 'vehicle-photos' */
+  photo_path: string | null
 }
 
 export interface Driver {

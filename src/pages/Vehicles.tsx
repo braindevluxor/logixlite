@@ -1,6 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Camera, Car, Pencil, Plus, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import {
+  removeVehiclePhoto,
+  uploadVehiclePhoto,
+  vehiclePhotoUrl,
+} from '../lib/photos'
 import type { Driver, Vehicle, VehicleStatus } from '../lib/types'
 
 const EMPTY: Partial<Vehicle> = {
@@ -12,6 +17,13 @@ const EMPTY: Partial<Vehicle> = {
   status: 'activo',
   notes: '',
   default_driver_id: null,
+  photo_path: null,
+}
+
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  activo: 'Activo',
+  mantenimiento: 'Mantenimiento',
+  inactivo: 'Inactivo',
 }
 
 export default function Vehicles() {
@@ -19,9 +31,18 @@ export default function Vehicles() {
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<Vehicle>>(EMPTY)
+  const [saving, setSaving] = useState(false)
+
+  // Foto: archivo elegido (se sube al guardar) + preview local
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const oldPathRef = useRef<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -39,21 +60,69 @@ export default function Vehicles() {
     load()
   }, [])
 
+  const filtered = items.filter((v) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return (
+      v.plate.toLowerCase().includes(q) ||
+      (v.brand ?? '').toLowerCase().includes(q) ||
+      (v.model ?? '').toLowerCase().includes(q)
+    )
+  })
+
+  function closeForm() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setShowForm(false)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setError(null)
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(EMPTY)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    oldPathRef.current = null
+    setError(null)
     setShowForm(true)
   }
 
   function openEdit(v: Vehicle) {
     setEditing(v)
     setForm(v)
+    setPhotoFile(null)
+    setPhotoPreview(vehiclePhotoUrl(v.photo_path))
+    oldPathRef.current = v.photo_path
+    setError(null)
     setShowForm(true)
+  }
+
+  function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('El archivo debe ser una imagen (JPG, PNG o WebP)')
+      return
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setError(null)
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  function clearPhoto() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setForm((f) => ({ ...f, photo_path: null }))
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+
     const payload = {
       plate: (form.plate ?? '').trim().toUpperCase(),
       brand: form.brand?.trim() || null,
@@ -68,34 +137,64 @@ export default function Vehicles() {
     if (!payload.capacity || payload.capacity < 1)
       return setError('La capacidad debe ser al menos 1 puesto')
 
-    const query = editing
-      ? supabase.from('vehicles').update(payload).eq('id', editing.id)
-      : supabase.from('vehicles').insert(payload)
+    setSaving(true)
+    let uploadedPath: string | null = null
 
-    const { error } = await query
-    if (error) {
-      setError(
-        error.code === '23505' ? 'Ya existe un vehículo con esa placa' : error.message
-      )
-      return
+    try {
+      // Subir la foto (si se eligió una nueva) antes de guardar
+      let photoPath = form.photo_path ?? null
+      if (photoFile) {
+        uploadedPath = await uploadVehiclePhoto(photoFile)
+        photoPath = uploadedPath
+      }
+
+      const query = editing
+        ? supabase
+            .from('vehicles')
+            .update({ ...payload, photo_path: photoPath })
+            .eq('id', editing.id)
+        : supabase.from('vehicles').insert({ ...payload, photo_path: photoPath })
+
+      const { error: saveErr } = await query
+      if (saveErr) {
+        if (uploadedPath) removeVehiclePhoto(uploadedPath) // no dejar huérfana
+        setError(
+          saveErr.code === '23505' ? 'Ya existe un vehículo con esa placa' : saveErr.message
+        )
+        return
+      }
+
+      // Si se reemplazó o quitó la foto anterior, eliminarla del bucket
+      const oldPath = oldPathRef.current
+      if (oldPath && oldPath !== photoPath) removeVehiclePhoto(oldPath)
+
+      closeForm()
+      load()
+    } catch (err) {
+      if (uploadedPath) removeVehiclePhoto(uploadedPath)
+      setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setSaving(false)
     }
-    setShowForm(false)
-    load()
   }
 
   async function onDelete(v: Vehicle) {
     if (!confirm(`¿Eliminar el vehículo ${v.plate}?`)) return
-    const { error } = await supabase.from('vehicles').delete().eq('id', v.id)
-    if (error) {
+    const { error: delErr } = await supabase.from('vehicles').delete().eq('id', v.id)
+    if (delErr) {
       setError(
-        error.code === '23503'
+        delErr.code === '23503'
           ? 'No se puede eliminar: tiene viajes asociados. Puede marcarlo como "inactivo".'
-          : error.message
+          : delErr.message
       )
       return
     }
+    if (v.photo_path) removeVehiclePhoto(v.photo_path)
     load()
   }
+
+  const driverName = (id: number | null) =>
+    id ? (drivers.find((d) => d.id === id)?.full_name ?? null) : null
 
   return (
     <div className="page">
@@ -106,51 +205,161 @@ export default function Vehicles() {
         </button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {loading ? (
-        <p className="muted">Cargando…</p>
-      ) : items.length === 0 ? (
-        <p className="muted">No hay vehículos registrados.</p>
-      ) : (
-        <ul className="list">
-          {items.map((v) => (
-            <li key={v.id}>
-              <div className="list-item list-item-actions">
-                <div>
-                  <strong>{v.plate}</strong>{' '}
-                  <span className="muted">
-                    {[v.brand, v.model, v.year].filter(Boolean).join(' ') || '—'}
-                  </span>
-                  <div className="muted small">
-                    {v.capacity} puesto{v.capacity !== 1 ? 's' : ''}
-                    {v.default_driver_id &&
-                      ` · chofer: ${drivers.find((d) => d.id === v.default_driver_id)?.full_name ?? '—'}`}
-                  </div>
-                </div>
-                <div className="row gap-sm">
-                  <span className={`badge badge-${v.status}`}>{v.status}</span>
-                  <button className="btn btn-sm" onClick={() => openEdit(v)}>
-                    <Pencil size={13} /> Editar
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => onDelete(v)}
-                    aria-label="Eliminar"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+      {items.length > 0 && (
+        <input
+          className="search"
+          placeholder="Buscar por placa, marca o modelo…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       )}
 
+      {error && !showForm && <div className="alert alert-error">{error}</div>}
+
+      {loading ? (
+        <div className="veh-grid">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="veh-card skeleton">
+              <div className="veh-photo sk-photo" />
+              <div className="veh-body">
+                <span className="sk-line wide" />
+                <span className="sk-line" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">
+            <Car size={34} />
+          </span>
+          <h2>Aún no hay vehículos</h2>
+          <p className="muted">
+            Registra el primero con su foto, capacidad de puestos y chofer
+            predeterminado.
+          </p>
+          <button className="btn btn-primary" onClick={openCreate}>
+            <Plus size={15} /> Nuevo vehículo
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-icon">
+            <Search size={30} />
+          </span>
+          <p className="muted">
+            Ningún vehículo coincide con <strong>"{search}"</strong>.
+          </p>
+          <button className="btn" onClick={() => setSearch('')}>
+            Limpiar búsqueda
+          </button>
+        </div>
+      ) : (
+        <div className="veh-grid">
+          {filtered.map((v) => {
+            const photo = vehiclePhotoUrl(v.photo_path)
+            const driver = driverName(v.default_driver_id)
+            return (
+              <article key={v.id} className="veh-card">
+                <div className="veh-photo">
+                  {photo ? (
+                    <img src={photo} alt={v.plate} loading="lazy" />
+                  ) : (
+                    <Car size={44} strokeWidth={1.4} />
+                  )}
+                  <span className={`badge badge-${v.status}`}>
+                    {STATUS_LABELS[v.status]}
+                  </span>
+                </div>
+
+                <div className="veh-body">
+                  <div className="veh-plate">{v.plate}</div>
+                  <div className="veh-sub">
+                    {[v.brand, v.model].filter(Boolean).join(' ') || '—'}
+                    {v.year ? ` · ${v.year}` : ''}
+                  </div>
+
+                  <div className="veh-tags">
+                    <span className="capacity-pill">{v.capacity} puestos</span>
+                    {driver && <span className="veh-driver">🧑 {driver}</span>}
+                  </div>
+
+                  {v.notes && <div className="veh-notes">{v.notes}</div>}
+
+                  <div className="veh-actions">
+                    <button className="btn btn-sm" onClick={() => openEdit(v)}>
+                      <Pencil size={13} /> Editar
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => onDelete(v)}
+                      aria-label={`Eliminar ${v.plate}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ---------- Modal: formulario ---------- */}
       {showForm && (
-        <div className="modal-backdrop" onClick={() => setShowForm(false)}>
-          <form className="card modal" onClick={(e) => e.stopPropagation()} onSubmit={onSubmit}>
-            <h2>{editing ? 'Editar vehículo' : 'Nuevo vehículo'}</h2>
+        <div className="modal-backdrop" onClick={closeForm}>
+          <form
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={onSubmit}
+          >
+            <h2>{editing ? `Editar ${editing.plate}` : 'Nuevo vehículo'}</h2>
+
+            {error && <div className="alert alert-error">{error}</div>}
+
+            {/* Foto */}
+            <div
+              className="photo-upload"
+              onClick={() => fileRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileRef.current?.click()
+                }
+              }}
+            >
+              {photoPreview ? (
+                <>
+                  <img src={photoPreview} alt="Vista previa" />
+                  <button
+                    type="button"
+                    className="photo-remove"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      clearPhoto()
+                    }}
+                    aria-label="Quitar foto"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              ) : (
+                <span className="photo-hint">
+                  <Camera size={26} />
+                  <strong>Tomar o elegir foto</strong>
+                  <small>JPG, PNG o WebP · se optimiza automáticamente</small>
+                </span>
+              )}
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={onPickPhoto}
+            />
 
             <label className="field">
               <span>Placa *</span>
@@ -159,6 +368,7 @@ export default function Vehicles() {
                 onChange={(e) => setForm({ ...form, plate: e.target.value })}
                 placeholder="ABC123"
                 required
+                autoCapitalize="characters"
               />
             </label>
 
@@ -190,7 +400,10 @@ export default function Vehicles() {
                   max={2100}
                   value={form.year ?? ''}
                   onChange={(e) =>
-                    setForm({ ...form, year: e.target.value ? Number(e.target.value) : undefined })
+                    setForm({
+                      ...form,
+                      year: e.target.value ? Number(e.target.value) : undefined,
+                    })
                   }
                 />
               </label>
@@ -206,17 +419,21 @@ export default function Vehicles() {
               </label>
             </div>
 
-            <label className="field">
+            <div className="field">
               <span>Estado</span>
-              <select
-                value={form.status ?? 'activo'}
-                onChange={(e) => setForm({ ...form, status: e.target.value as VehicleStatus })}
-              >
-                <option value="activo">Activo</option>
-                <option value="mantenimiento">Mantenimiento</option>
-                <option value="inactivo">Inactivo</option>
-              </select>
-            </label>
+              <div className="seg">
+                {(Object.keys(STATUS_LABELS) as VehicleStatus[]).map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className={form.status === s ? 'active' : ''}
+                    onClick={() => setForm({ ...form, status: s })}
+                  >
+                    {STATUS_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <label className="field">
               <span>Chofer predeterminado</span>
@@ -239,11 +456,6 @@ export default function Vehicles() {
                   ))}
               </select>
             </label>
-            {drivers.filter((d) => d.active).length === 0 && (
-              <p className="muted small">
-                No hay choferes activos. Regístralos primero en la sección Choferes.
-              </p>
-            )}
 
             <label className="field">
               <span>Notas</span>
@@ -255,10 +467,16 @@ export default function Vehicles() {
             </label>
 
             <div className="row gap">
-              <button type="button" className="btn" onClick={() => setShowForm(false)}>
+              <button type="button" className="btn" onClick={closeForm} disabled={saving}>
                 Cancelar
               </button>
-              <button className="btn btn-primary grow">Guardar</button>
+              <button className="btn btn-primary grow" disabled={saving}>
+                {saving
+                  ? photoFile
+                    ? 'Subiendo foto…'
+                    : 'Guardando…'
+                  : 'Guardar'}
+              </button>
             </div>
           </form>
         </div>
