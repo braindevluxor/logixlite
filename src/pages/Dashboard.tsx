@@ -73,13 +73,21 @@ function daysAgoISO(n: number): string {
 }
 
 
-// ===== Dona de traslados por departamento (SVG a mano) =====
+// ===== Dona generica (SVG a mano) =====
 function Donut({
   data,
   total,
+  centerValue,
+  centerLabel,
+  hoverLabel,
 }: {
   data: (DeptStat & { color: string })[]
+  /** suma de los sectores (para el calculo de angulos) */
   total: number
+  /** numero a mostrar en el centro sin hover (default: total) */
+  centerValue?: number
+  centerLabel: string
+  hoverLabel?: string
 }) {
   const [hover, setHover] = useState<number | null>(null)
   const R = 70
@@ -103,7 +111,7 @@ function Donut({
         viewBox="0 0 200 200"
         className="donut"
         role="img"
-        aria-label="Traslados por departamento"
+        aria-label={centerLabel}
       >
         <g transform="rotate(-90 100 100)">
           <circle cx="100" cy="100" r={R} fill="none" stroke="#eef2f7" strokeWidth="26" />
@@ -125,10 +133,10 @@ function Donut({
           ))}
         </g>
         <text x="100" y="92" textAnchor="middle" className="donut-center-num">
-          {active ? active.count : total}
+          {active ? active.count : centerValue ?? total}
         </text>
         <text x="100" y="114" textAnchor="middle" className="donut-center-label">
-          {active ? 'traslados' : 'traslados'}
+          {active ? (hoverLabel ?? centerLabel) : centerLabel}
         </text>
         {active && (
           <text x="100" y="135" textAnchor="middle" className="donut-center-dept">
@@ -147,6 +155,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [trips, setTrips] = useState<TripRow[]>([])
   const [passengers, setPassengers] = useState<PassRow[]>([])
+  const [stopRows, setStopRows] = useState<{ name: string; trip_id: number }[]>([])
 
   // Modal de viajes pendientes
   const [showPending, setShowPending] = useState(false)
@@ -169,15 +178,24 @@ export default function Dashboard() {
       const fromIso = new Date(`${from}T00:00:00`).toISOString()
       const toIso = new Date(`${to}T23:59:59.999`).toISOString()
 
-      const { data: tripData, error: tripErr } = await supabase
-        .from('trips')
-        .select('id, status')
-        .gte('departure_at', fromIso)
-        .lte('departure_at', toIso)
+      const [{ data: tripData, error: tripErr }, { data: stopData, error: stopErr }] =
+        await Promise.all([
+          supabase
+            .from('trips')
+            .select('id, status')
+            .gte('departure_at', fromIso)
+            .lte('departure_at', toIso),
+          // Paradas de los viajes del rango (viajes!inner = solo viajes que cumplen)
+          supabase
+            .from('trip_destinations')
+            .select('name, trip_id, trips!inner(departure_at)')
+            .gte('trips.departure_at', fromIso)
+            .lte('trips.departure_at', toIso),
+        ])
 
-      if (tripErr) {
+      if (tripErr || stopErr) {
         if (!cancelled) {
-          setError(tripErr.message)
+          setError(tripErr?.message || stopErr?.message || 'Error al cargar el plan')
           setLoading(false)
         }
         return
@@ -204,6 +222,9 @@ export default function Dashboard() {
       if (!cancelled) {
         setTrips((tripData as TripRow[]) ?? [])
         setPassengers(passData)
+        setStopRows(
+          ((stopData ?? []) as { name: string; trip_id: number }[])
+        )
         setLoading(false)
       }
     }
@@ -251,6 +272,38 @@ export default function Dashboard() {
     () => new Set(passengers.map((p) => p.department?.trim() || 'Sin departamento')).size,
     [passengers]
   )
+
+  /**
+   * Paradas ÚNICAS del rango: agrupa por nombre (3 pasajeros hacia
+   * el mismo destino = 1 parada) y cuenta en cuántos viajes aparece
+   * cada una (para dimensionar los sectores del gráfico).
+   */
+  const stopStats = useMemo(() => {
+    const byName = new Map<string, Set<number>>()
+    for (const r of stopRows) {
+      const name = r.name.trim()
+      if (!name) continue
+      let trips = byName.get(name)
+      if (!trips) {
+        trips = new Set()
+        byName.set(name, trips)
+      }
+      trips.add(r.trip_id)
+    }
+    const uniqueCount = byName.size
+    const list = [...byName.entries()]
+      .map(([name, trips]) => ({ name, count: trips.size }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'))
+    return { uniqueCount, list }
+  }, [stopRows])
+
+  const stopDonut = useMemo(
+    () => stopStats.list.map((d, i) => ({ ...d, color: COLORS[i % COLORS.length] })),
+    [stopStats]
+  )
+
+  /** suma de usos (para los angulos de la dona de paradas) */
+  const stopTotalUses = stopDonut.reduce((s, d) => s + d.count, 0)
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0)
 
@@ -463,7 +516,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ---- Gráfico de torta ---- */}
+          {/* ---- Gráficos ---- */}
+          <div className="charts-row">
           <div className="card chart-card">
             <div className="chart-head">
               <div>
@@ -484,7 +538,11 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="chart-grid">
-                <Donut data={topDepts} total={totalTraslados} />
+                <Donut
+                  data={topDepts}
+                  total={totalTraslados}
+                  centerLabel="traslados"
+                />
                 <ul className="chart-legend">
                   {topDepts.map((d) => {
                     const p = Math.round((d.count / totalTraslados) * 100)
@@ -506,6 +564,49 @@ export default function Dashboard() {
                 </ul>
               </div>
             )}
+          </div>
+
+          {/* ---- Gráfico: paradas únicas ---- */}
+          <div className="card chart-card">
+            <div className="chart-head">
+              <div>
+                <h2 className="chart-title">Paradas / destinos del período</h2>
+                <p className="chart-sub">
+                  {stopStats.uniqueCount} parada(s) única(s) · cada parada cuenta 1 vez
+                  aunque vayan varios pasajeros
+                </p>
+              </div>
+              <span className="chart-badge">
+                <ArrowRight size={13} /> {from} → {to}
+              </span>
+            </div>
+
+            {stopStats.uniqueCount === 0 ? (
+              <div className="chart-empty">
+                <Route size={28} />
+                <p>No hay paradas registradas en el rango de fechas.</p>
+              </div>
+            ) : (
+              <div className="chart-grid">
+                <Donut
+                  data={stopDonut}
+                  total={stopTotalUses}
+                  centerValue={stopStats.uniqueCount}
+                  centerLabel="paradas"
+                  hoverLabel="viajes"
+                />
+                <ul className="chart-legend">
+                  {stopDonut.map((d) => (
+                    <li key={d.name}>
+                      <span className="legend-dot" style={{ background: d.color }} />
+                      <span className="legend-name">{d.name}</span>
+                      <strong className="legend-count">{d.count} viajes</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
           </div>
         </>
       )}

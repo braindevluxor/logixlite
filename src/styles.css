@@ -2475,3 +2475,11 @@ code {
   outline: 2px solid #128c7e;
   outline-offset: 1px;
 }
+
+/* ===== Fila de graficos (2 columnas en escritorio) ===== */
+.charts-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
