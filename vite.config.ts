@@ -108,9 +108,26 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-        navigateFallback: '/index.html',
+        // El HTML NO se precachea: siempre se pide a la red para que un
+        // deploy nuevo se vea de inmediato (con fallback a caché si no hay
+        // red). Los assets con hash (js/css) sí se precachean.
+        globPatterns: ['**/*.{js,css,svg,png,ico}'],
+        // Sin navigateFallback: la ruta de navegación la cubre el
+        // runtimeCaching de abajo (NetworkFirst sobre el index.html).
+        navigateFallback: null,
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
+          {
+            // Navegaciones (el index.html): network-first
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // Empleados de la API externa (con caché para uso offline)
             urlPattern: /^https:\/\/desarrolloluxor\.lat\/api\/talentohumano\/.*/i,
