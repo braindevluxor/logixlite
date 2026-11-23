@@ -30,6 +30,8 @@ import Trips from './pages/Trips'
 import TripCreate from './pages/TripCreate'
 import TripDetail from './pages/TripDetail'
 import DriverTrip from './pages/DriverTrip'
+import DriverHome from './pages/DriverHome'
+import FreeTrip from './pages/FreeTrip'
 
 /**
  * Items del menu: se renderizan en la barra LATERAL (escritorio,
@@ -163,6 +165,10 @@ export default function App() {
     <Routes>
       {/* Vista pública del chofer: acceso solo por token en la URL */}
       <Route path="/viaje/:token" element={<DriverTrip />} />
+
+      {/* Menu publico del chofer: pendientes + viaje libre */}
+      <Route path="/chofer/:token" element={<DriverHome />} />
+      <Route path="/chofer/:token/libre" element={<FreeTrip />} />
 
       <Route path="/login" element={<Login />} />
       <Route

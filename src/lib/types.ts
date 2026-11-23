@@ -34,6 +34,8 @@ export interface Driver {
   license_expires: string | null
   active: boolean
   notes: string | null
+  /** Token del link publico del chofer: /chofer/<token> */
+  link_token?: string | null
 }
 
 export type TripStatus = 'programado' | 'en_curso' | 'finalizado' | 'cancelado'
@@ -116,6 +118,55 @@ export interface SharedTrip {
   destinations: TripDestination[]
   links: TripPassengerDestination[]
   incidents: TripIncident[]
+}
+
+/** Viaje pendiente del chofer en su link publico */
+export interface DriverPendingTrip {
+  id: number
+  status: TripStatus
+  departure_at: string
+  share_token: string | null
+  notes: string | null
+  track_km: boolean
+  branch: string | null
+  vehicle: string | null
+  passengers: number
+  destinations: string[]
+}
+
+/** Viaje libre activo del chofer (pasajeros + paradas) */
+export interface FreeTrip {
+  id: number
+  status: 'en_curso' | 'finalizado'
+  started_at: string
+  finished_at: string | null
+  passengers: {
+    id: number
+    full_name: string
+    dni: string | null
+    phone: string | null
+    seq: number
+  }[]
+  stops: {
+    id: number
+    name: string
+    note: string | null
+    arrived_at: string
+    seq: number
+  }[]
+}
+
+/** Respuesta de driver_link_get (menu publico del chofer) */
+export interface DriverLinkData {
+  driver: {
+    id: number
+    full_name: string
+    dni: string
+    phone: string | null
+    active: boolean
+  }
+  trips: DriverPendingTrip[]
+  free_trip: FreeTrip | null
 }
 
 // ------------------------------------------------------------

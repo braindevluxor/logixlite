@@ -305,8 +305,10 @@ code {
      negativo anula el padding del .app y el padding-left deja
      libre la zona que cubre la barra de iconos.
      Altura fija de 56px para saber exactamente donde empieza
-     la barra lateral */
-  .topbar {
+     la barra lateral.
+     Se limita a .app .topbar: las vistas publicas del chofer
+     (/viaje, /chofer) usan .topbar fuera del Shell. */
+  .app .topbar {
     margin-left: -88px;
     padding-left: 100px;
     height: 56px;
@@ -1448,6 +1450,233 @@ code {
 
 .driver-foot {
   text-align: center;
+}
+
+/* ===== Menu publico del chofer (/chofer/:token) ===== */
+.dm-hello {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dm-name {
+  font-size: 1.15rem;
+}
+
+.driver-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s;
+}
+
+.menu-option:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+  transform: translateY(-2px);
+}
+
+.mo-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--primary);
+}
+
+.mo-icon-live {
+  background: #dcfce7;
+  color: var(--ok);
+}
+
+.mo-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mo-title {
+  font-weight: 700;
+}
+
+.mo-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* Viaje libre activo: destacado en verde */
+.mo-live {
+  border-color: #86efac;
+  background: #f0fdf4;
+  margin-bottom: 0.6rem;
+}
+
+.mo-live:hover {
+  background: #dcfce7;
+}
+
+.dm-section {
+  margin-top: 0.9rem;
+}
+
+.dm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.7rem;
+}
+
+/* Mini tarjeta de viaje pendiente */
+.trip-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tm-route {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.tm-route svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.tm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.tm-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dm-driver {
+  margin: 0 0 0.6rem;
+}
+
+/* ===== Viaje libre (/chofer/:token/libre) ===== */
+.ft-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.7rem;
+  font-size: 1rem;
+}
+
+.ft-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ft-form input {
+  flex: 1 1 130px;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.ft-form input.grow {
+  flex: 2 1 200px;
+}
+
+.ft-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.ft-form .btn {
+  flex: 0 0 auto;
+}
+
+.ft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.ft-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.ft-row .grow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ft-seq {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Resumen al finalizar el viaje libre */
+.ft-summary {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ft-summary-ok {
+  color: var(--ok);
 }
 
 .toast {

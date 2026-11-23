@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Download, Pencil, Plus, X } from 'lucide-react'
+import { Check, Download, Link2, Pencil, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { useSearch } from '../search/SearchContext'
@@ -22,6 +22,8 @@ export default function Drivers() {
   const [editing, setEditing] = useState<Driver | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<Driver>>(EMPTY)
+  // Link publico: muestra "Copiado" un momento tras copiar
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   // Buscador global (barra superior)
   const { query: search } = useSearch()
@@ -104,6 +106,26 @@ export default function Drivers() {
       return
     }
     load()
+  }
+
+  // ---- Link publico del chofer (/chofer/<token>) ----
+  async function copyLink(d: Driver) {
+    setError(null)
+    if (!d.link_token) {
+      setError(
+        'Este chofer aún no tiene link. Ejecuta supabase/driver_link.sql en el SQL Editor de Supabase.'
+      )
+      return
+    }
+    const url = `${window.location.origin}/chofer/${d.link_token}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedId(d.id)
+      window.setTimeout(() => setCopiedId((v) => (v === d.id ? null : v)), 2200)
+    } catch {
+      // Navegadores sin permiso de portapapeles: muestra la URL
+      window.prompt('Link público del chofer:', url)
+    }
   }
 
   // ---- Importación ----
@@ -239,6 +261,21 @@ export default function Drivers() {
                   <span className={`badge badge-${d.active ? 'activo' : 'inactivo'}`}>
                     {d.active ? 'activo' : 'inactivo'}
                   </span>
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => copyLink(d)}
+                    title="Copiar link público del chofer"
+                  >
+                    {copiedId === d.id ? (
+                      <>
+                        <Check size={13} /> Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={13} /> Link
+                      </>
+                    )}
+                  </button>
                   <button className="btn btn-sm" onClick={() => openEdit(d)}>
                     <Pencil size={13} /> Editar
                   </button>
