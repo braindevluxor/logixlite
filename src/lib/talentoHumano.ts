@@ -64,5 +64,5 @@ export async function fetchEmployees(branchId: number): Promise<ApiEmployee[]> {
 
 /** Nombre completo legible de un empleado de la API */
 export function employeeFullName(e: ApiEmployee): string {
-  return `${e.name} ${e.lastname}`.trim()
+  return `${e.name ?? ''} ${e.lastname ?? ''}`.trim()
 }

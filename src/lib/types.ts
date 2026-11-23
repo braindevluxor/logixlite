@@ -182,15 +182,16 @@ export interface ApiEmployee {
   lastname: string
   /** Teléfono móvil (ej. 04124362012); puede venir vacío */
   phone?: string | null
-  role_id: string
-  role_name: string
-  department_id: number
-  department_name: string
+  role_id: string | null
+  /** La API puede devolver null en campos de texto */
+  role_name: string | null
+  department_id: number | null
+  department_name: string | null
   admin_loc_id: number | null
   admin_loc_name: string | null
-  admission_date: string
+  admission_date: string | null
   dismissal_date: string | null
-  branch_id: number
-  branch_name: string
+  branch_id: number | null
+  branch_name: string | null
   active: boolean
 }

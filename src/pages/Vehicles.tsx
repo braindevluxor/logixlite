@@ -109,7 +109,7 @@ export default function Vehicles() {
     const q = search.trim().toLowerCase()
     if (!q) return true
     return (
-      v.plate.toLowerCase().includes(q) ||
+      String(v.plate ?? '').toLowerCase().includes(q) ||
       (v.brand ?? '').toLowerCase().includes(q) ||
       (v.model ?? '').toLowerCase().includes(q)
     )

@@ -242,7 +242,7 @@ export default function Drivers() {
       }
 
       const filtered = onlyDriverRole
-        ? employees.filter((e) => /chofer/i.test(e.role_name))
+        ? employees.filter((e) => /chofer/i.test(e.role_name ?? ''))
         : employees
 
       setImportList(filtered)
@@ -302,8 +302,8 @@ export default function Drivers() {
 
   const filtered = items.filter(
     (d) =>
-      d.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      d.dni.includes(search)
+      (d.full_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      String(d.dni ?? '').includes(search)
   )
 
   return (

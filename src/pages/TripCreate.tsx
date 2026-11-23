@@ -356,9 +356,9 @@ export default function TripCreate() {
       return (
         employeeFullName(e).toLowerCase().includes(q) ||
         String(e.dni).includes(q) ||
-        e.role_name.toLowerCase().includes(q) ||
-        e.department_name.toLowerCase().includes(q) ||
-        e.branch_name.toLowerCase().includes(q)
+        (e.role_name ?? '').toLowerCase().includes(q) ||
+        (e.department_name ?? '').toLowerCase().includes(q) ||
+        (e.branch_name ?? '').toLowerCase().includes(q)
       )
     }
 
