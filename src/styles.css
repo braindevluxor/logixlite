@@ -748,6 +748,34 @@ code {
   flex-wrap: wrap;
 }
 
+/* ===== Choferes: avatar con foto ===== */
+.drv-id {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.drv-avatar {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+}
+
+.drv-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ===== Badges ===== */
 .badge {
   font-size: 0.7rem;

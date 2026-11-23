@@ -1,6 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Check, Download, Link2, Pencil, Plus, X } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Camera, Check, Download, Link2, Pencil, Plus, UserRound, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import {
+  driverPhotoUrl,
+  removeDriverPhoto,
+  uploadDriverPhoto,
+} from '../lib/photos'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { useSearch } from '../search/SearchContext'
 import type { ApiEmployee, Branch, Driver } from '../lib/types'
@@ -22,8 +27,15 @@ export default function Drivers() {
   const [editing, setEditing] = useState<Driver | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Partial<Driver>>(EMPTY)
+  const [saving, setSaving] = useState(false)
   // Link publico: muestra "Copiado" un momento tras copiar
   const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  // Foto: archivo elegido (se sube al guardar) + preview local
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const oldPathRef = useRef<string | null>(null)
 
   // Buscador global (barra superior)
   const { query: search } = useSearch()
@@ -54,22 +66,59 @@ export default function Drivers() {
     load()
   }, [])
 
+  function closeForm() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setShowForm(false)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setError(null)
+  }
+
   function openCreate() {
     setEditing(null)
     setForm(EMPTY)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    oldPathRef.current = null
+    setError(null)
     setShowForm(true)
   }
 
   function openEdit(d: Driver) {
     setEditing(d)
     setForm(d)
+    setPhotoFile(null)
+    setPhotoPreview(driverPhotoUrl(d.photo_path ?? null))
+    oldPathRef.current = d.photo_path ?? null
+    setError(null)
     setShowForm(true)
+  }
+
+  function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('El archivo debe ser una imagen (JPG, PNG o WebP)')
+      return
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setError(null)
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  function clearPhoto() {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setForm((f) => ({ ...f, photo_path: null }))
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    const payload = {
+    const base = {
       dni: (form.dni ?? '').trim(),
       full_name: (form.full_name ?? '').trim(),
       phone: form.phone?.trim() || null,
@@ -78,20 +127,55 @@ export default function Drivers() {
       active: form.active ?? true,
       notes: form.notes?.trim() || null,
     }
-    if (!payload.dni) return setError('La cédula (DNI) es obligatoria')
-    if (!payload.full_name) return setError('El nombre es obligatorio')
+    if (!base.dni) return setError('La cédula (DNI) es obligatoria')
+    if (!base.full_name) return setError('El nombre es obligatorio')
 
-    const query = editing
-      ? supabase.from('drivers').update(payload).eq('id', editing.id)
-      : supabase.from('drivers').insert(payload)
+    setSaving(true)
+    let uploadedPath: string | null = null
 
-    const { error } = await query
-    if (error) {
-      setError(error.code === '23505' ? 'Ya existe un chofer con esa cédula' : error.message)
-      return
+    try {
+      // Subir la foto (si se eligió una nueva) antes de guardar
+      let photoPath = form.photo_path ?? null
+      if (photoFile) {
+        uploadedPath = await uploadDriverPhoto(photoFile)
+        photoPath = uploadedPath
+      }
+
+      // photo_path solo viaja si hay valor o si se quito una foto
+      // existente: sin la columna (driver_photos.sql) no se envia
+      const payload: Record<string, unknown> = { ...base }
+      if (photoPath) payload.photo_path = photoPath
+      else if (editing?.photo_path && form.photo_path === null) payload.photo_path = null
+
+      const query = editing
+        ? supabase.from('drivers').update(payload).eq('id', editing.id)
+        : supabase.from('drivers').insert(payload)
+
+      const { error: saveErr } = await query
+      if (saveErr) {
+        if (uploadedPath) removeDriverPhoto(uploadedPath) // no dejar huérfana
+        setError(
+          saveErr.message.includes('photo_path')
+            ? 'Ejecuta supabase/driver_photos.sql en el SQL Editor de Supabase para habilitar las fotos.'
+            : saveErr.code === '23505'
+              ? 'Ya existe un chofer con esa cédula'
+              : saveErr.message
+        )
+        return
+      }
+
+      // Si se reemplazó o quitó la foto anterior, eliminarla del bucket
+      const oldPath = oldPathRef.current
+      if (oldPath && oldPath !== photoPath) removeDriverPhoto(oldPath)
+
+      closeForm()
+      load()
+    } catch (err) {
+      if (uploadedPath) removeDriverPhoto(uploadedPath)
+      setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
+      setSaving(false)
     }
-    setShowForm(false)
-    load()
   }
 
   async function onDelete(d: Driver) {
@@ -105,6 +189,7 @@ export default function Drivers() {
       )
       return
     }
+    if (d.photo_path) removeDriverPhoto(d.photo_path)
     load()
   }
 
@@ -246,58 +331,114 @@ export default function Drivers() {
         </p>
       ) : (
         <ul className="list">
-          {filtered.map((d) => (
-            <li key={d.id}>
-              <div className="list-item list-item-actions">
-                <div>
-                  <strong>{d.full_name}</strong>
-                  <div className="muted small">
-                    C.I. {d.dni}
-                    {d.phone ? ` · ${d.phone}` : ''}
-                    {d.license_number ? ` · Lic. ${d.license_number}` : ''}
+          {filtered.map((d) => {
+            const photo = driverPhotoUrl(d.photo_path ?? null)
+            return (
+              <li key={d.id}>
+                <div className="list-item list-item-actions">
+                  <div className="drv-id">
+                    <span className="drv-avatar">
+                      {photo ? (
+                        <img src={photo} alt={d.full_name} loading="lazy" />
+                      ) : (
+                        <UserRound size={22} />
+                      )}
+                    </span>
+                    <div>
+                      <strong>{d.full_name}</strong>
+                      <div className="muted small">
+                        C.I. {d.dni}
+                        {d.phone ? ` · ${d.phone}` : ''}
+                        {d.license_number ? ` · Lic. ${d.license_number}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row gap-sm">
+                    <span className={`badge badge-${d.active ? 'activo' : 'inactivo'}`}>
+                      {d.active ? 'activo' : 'inactivo'}
+                    </span>
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => copyLink(d)}
+                      title="Copiar link público del chofer"
+                    >
+                      {copiedId === d.id ? (
+                        <>
+                          <Check size={13} /> Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Link2 size={13} /> Link
+                        </>
+                      )}
+                    </button>
+                    <button className="btn btn-sm" onClick={() => openEdit(d)}>
+                      <Pencil size={13} /> Editar
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => onDelete(d)}
+                      aria-label="Eliminar"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                 </div>
-                <div className="row gap-sm">
-                  <span className={`badge badge-${d.active ? 'activo' : 'inactivo'}`}>
-                    {d.active ? 'activo' : 'inactivo'}
-                  </span>
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => copyLink(d)}
-                    title="Copiar link público del chofer"
-                  >
-                    {copiedId === d.id ? (
-                      <>
-                        <Check size={13} /> Copiado
-                      </>
-                    ) : (
-                      <>
-                        <Link2 size={13} /> Link
-                      </>
-                    )}
-                  </button>
-                  <button className="btn btn-sm" onClick={() => openEdit(d)}>
-                    <Pencil size={13} /> Editar
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => onDelete(d)}
-                    aria-label="Eliminar"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
       )}
 
       {/* ---------- Modal: formulario chofer ---------- */}
       {showForm && (
-        <div className="modal-backdrop" onClick={() => setShowForm(false)}>
+        <div className="modal-backdrop" onClick={closeForm}>
           <form className="card modal" onClick={(e) => e.stopPropagation()} onSubmit={onSubmit}>
             <h2>{editing ? 'Editar chofer' : 'Nuevo chofer'}</h2>
+
+            {/* Foto del chofer */}
+            <div
+              className="photo-upload"
+              onClick={() => fileRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileRef.current?.click()
+                }
+              }}
+            >
+              {photoPreview ? (
+                <>
+                  <img src={photoPreview} alt="Vista previa" />
+                  <button
+                    type="button"
+                    className="photo-remove"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      clearPhoto()
+                    }}
+                    aria-label="Quitar foto"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              ) : (
+                <span className="photo-hint">
+                  <Camera size={26} />
+                  <strong>Tomar o elegir foto</strong>
+                  <small>JPG, PNG o WebP · se optimiza automáticamente</small>
+                </span>
+              )}
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={onPickPhoto}
+            />
 
             <label className="field">
               <span>Cédula (DNI) *</span>
@@ -363,10 +504,21 @@ export default function Drivers() {
             </label>
 
             <div className="row gap">
-              <button type="button" className="btn" onClick={() => setShowForm(false)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={closeForm}
+                disabled={saving}
+              >
                 Cancelar
               </button>
-              <button className="btn btn-primary grow">Guardar</button>
+              <button className="btn btn-primary grow" disabled={saving}>
+                {saving
+                  ? photoFile
+                    ? 'Subiendo foto…'
+                    : 'Guardando…'
+                  : 'Guardar'}
+              </button>
             </div>
           </form>
         </div>

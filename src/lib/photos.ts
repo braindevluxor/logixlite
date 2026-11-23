@@ -3,10 +3,19 @@ import { supabase } from './supabase'
 /** Bucket de Supabase Storage para fotos de vehículos */
 export const VEHICLE_BUCKET = 'vehicle-photos'
 
+/** Bucket de Supabase Storage para fotos de choferes */
+export const DRIVER_BUCKET = 'driver-photos'
+
 /** URL pública de la foto de un vehículo (null si no tiene) */
 export function vehiclePhotoUrl(path: string | null): string | null {
   if (!path) return null
   return supabase.storage.from(VEHICLE_BUCKET).getPublicUrl(path).data.publicUrl
+}
+
+/** URL pública de la foto de un chofer (null si no tiene) */
+export function driverPhotoUrl(path: string | null): string | null {
+  if (!path) return null
+  return supabase.storage.from(DRIVER_BUCKET).getPublicUrl(path).data.publicUrl
 }
 
 /** Reduce y comprime la foto en el navegador antes de subirla */
@@ -61,18 +70,18 @@ async function optimizeImage(file: File): Promise<Blob> {
 }
 
 /**
- * Optimiza y sube la foto al bucket. Devuelve la ruta a guardar
- * en vehicles.photo_path.
+ * Optimiza y sube la foto al bucket indicado. Devuelve la ruta
+ * a guardar en la columna photo_path.
  */
-export async function uploadVehiclePhoto(file: File): Promise<string> {
+async function uploadTo(bucket: string, folder: string, file: File): Promise<string> {
   if (!file.type.startsWith('image/')) {
     throw new Error('El archivo debe ser una imagen (JPG, PNG o WebP)')
   }
   const blob = await optimizeImage(file)
-  const path = `vehiculos/${crypto.randomUUID()}.jpg`
+  const path = `${folder}/${crypto.randomUUID()}.jpg`
 
   const { error } = await supabase.storage
-    .from(VEHICLE_BUCKET)
+    .from(bucket)
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false })
 
   if (error) throw new Error(`No se pudo subir la foto: ${error.message}`)
@@ -80,10 +89,30 @@ export async function uploadVehiclePhoto(file: File): Promise<string> {
 }
 
 /** Elimina una foto del bucket (best effort, sin lanzar) */
-export async function removeVehiclePhoto(path: string): Promise<void> {
+async function removeFrom(bucket: string, path: string): Promise<void> {
   try {
-    await supabase.storage.from(VEHICLE_BUCKET).remove([path])
+    await supabase.storage.from(bucket).remove([path])
   } catch (err) {
     console.warn('No se pudo eliminar la foto:', err)
   }
+}
+
+/** Sube la foto de un vehículo (bucket vehicle-photos) */
+export async function uploadVehiclePhoto(file: File): Promise<string> {
+  return uploadTo(VEHICLE_BUCKET, 'vehiculos', file)
+}
+
+/** Elimina la foto de un vehículo */
+export async function removeVehiclePhoto(path: string): Promise<void> {
+  await removeFrom(VEHICLE_BUCKET, path)
+}
+
+/** Sube la foto de un chofer (bucket driver-photos) */
+export async function uploadDriverPhoto(file: File): Promise<string> {
+  return uploadTo(DRIVER_BUCKET, 'choferes', file)
+}
+
+/** Elimina la foto de un chofer */
+export async function removeDriverPhoto(path: string): Promise<void> {
+  await removeFrom(DRIVER_BUCKET, path)
 }

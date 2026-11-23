@@ -36,6 +36,8 @@ export interface Driver {
   notes: string | null
   /** Token del link publico del chofer: /chofer/<token> */
   link_token?: string | null
+  /** Ruta de la foto en el bucket 'driver-photos' */
+  photo_path?: string | null
 }
 
 export type TripStatus = 'programado' | 'en_curso' | 'finalizado' | 'cancelado'
