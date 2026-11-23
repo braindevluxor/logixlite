@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { up } from '../lib/format'
+import { initials, up } from '../lib/format'
 import type { DriverLinkData } from '../lib/types'
 
 function fmtDateTime(iso: string): string {
@@ -212,6 +212,8 @@ export default function FreeTrip() {
     )
   }
 
+  const ini = initials(data.driver.full_name) || 'C'
+
   return (
     <div className="driver-page">
       <header className="topbar">
@@ -223,74 +225,105 @@ export default function FreeTrip() {
           />
           LOGIXLITE
         </span>
-        <Link className="btn btn-ghost" to={`/chofer/${token}`}>
+        <Link className="btn btn-soft" to={`/chofer/${token}`}>
           <ArrowLeft size={15} /> Menú
         </Link>
       </header>
 
       <main className="driver-main">
-        <p className="muted small dm-driver">{data.driver.full_name}</p>
+        {/* Saludo */}
+        <div className="driver-card dm-hello">
+          <span className="dm-avatar" aria-hidden="true">
+            {ini}
+          </span>
+          <span className="dm-hello-text">
+            <span className="dm-role">Chofer</span>
+            <strong className="dm-name">{data.driver.full_name}</strong>
+            <span className="dm-dni">C.I. {data.driver.dni}</span>
+          </span>
+        </div>
 
         {/* Resumen tras finalizar */}
         {summary && !trip && (
           <div className="driver-card ft-summary">
-            <CircleCheck size={38} className="ft-summary-ok" />
+            <span className="ft-ok-icon" aria-hidden="true">
+              <CircleCheck size={34} />
+            </span>
             <h2>Viaje finalizado</h2>
-            <p className="muted">
-              {summary.passengers} pasajero(s) · {summary.stops} parada(s)
-              <br />
-              <span className="small">Terminó: {fmtDateTime(summary.finished_at)}</span>
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary btn-block"
-              onClick={start}
-              disabled={busy}
-            >
-              <Play size={16} /> {busy ? 'Iniciando…' : 'Nuevo viaje libre'}
-            </button>
-            <Link className="btn btn-block" to={`/chofer/${token}`}>
-              Volver al menú
-            </Link>
+
+            <div className="ft-stats">
+              <div>
+                <strong>{summary.passengers}</strong>
+                <span>pasajero(s)</span>
+              </div>
+              <div>
+                <strong>{summary.stops}</strong>
+                <span>parada(s)</span>
+              </div>
+            </div>
+
+            <span className="muted small">Terminó: {fmtDateTime(summary.finished_at)}</span>
+
+            <div className="ft-actions">
+              <button
+                type="button"
+                className="btn btn-primary btn-block"
+                onClick={start}
+                disabled={busy}
+              >
+                <Play size={16} /> {busy ? 'Iniciando…' : 'Nuevo viaje libre'}
+              </button>
+              <Link className="btn btn-soft btn-block" to={`/chofer/${token}`}>
+                Volver al menú
+              </Link>
+            </div>
           </div>
         )}
 
         {/* Sin viaje activo */}
         {!trip && !summary && (
-          <div className="driver-card">
-            <h2 style={{ marginTop: 0 }}>Viaje libre</h2>
+          <div className="driver-card ft-hero">
+            <span className="ft-hero-icon" aria-hidden="true">
+              <Play size={30} />
+            </span>
+            <h2>Viaje libre</h2>
             <p className="muted">
               Registra a quienes llevas y cada parada que haces durante el
               recorrido. No requiere un viaje asignado.
             </p>
-            <button
-              type="button"
-              className="btn btn-primary btn-block"
-              onClick={start}
-              disabled={busy}
-            >
-              <Play size={16} /> {busy ? 'Iniciando…' : 'Iniciar viaje libre'}
-            </button>
-            <Link className="btn btn-block" to={`/chofer/${token}`}>
-              Volver al menú
-            </Link>
+            <div className="ft-actions">
+              <button
+                type="button"
+                className="btn btn-primary btn-block"
+                onClick={start}
+                disabled={busy}
+              >
+                <Play size={16} /> {busy ? 'Iniciando…' : 'Iniciar viaje libre'}
+              </button>
+              <Link className="btn btn-soft btn-block" to={`/chofer/${token}`}>
+                Volver al menú
+              </Link>
+            </div>
           </div>
         )}
 
         {/* Viaje libre activo */}
         {trip && (
           <>
-            <div className="driver-card">
-              <div className="row spread">
-                <h2 style={{ margin: 0 }}>Viaje libre</h2>
-                <span className="badge badge-en_curso">En curso</span>
+            <div className="driver-card ft-live">
+              <div className="ft-live-head">
+                <span className="ft-live-icon" aria-hidden="true">
+                  <Play size={22} />
+                </span>
+                <span className="ft-live-text">
+                  <strong>Viaje libre</strong>
+                  <span className="muted small">Inicio: {fmtDateTime(trip.started_at)}</span>
+                </span>
+                <span className="mo-badge">En curso</span>
               </div>
-              <p className="muted small" style={{ margin: '0.4rem 0 0.8rem' }}>
-                Inicio: {fmtDateTime(trip.started_at)}
-              </p>
               <button
                 type="button"
-                className="btn btn-danger btn-block"
+                className="btn btn-primary btn-block"
                 onClick={finish}
                 disabled={busy}
               >
@@ -301,7 +334,11 @@ export default function FreeTrip() {
             {/* Pasajeros */}
             <div className="driver-card">
               <h2 className="ft-title">
-                <UserRound size={17} /> Pasajeros ({trip.passengers.length})
+                <span className="ft-title-icon" aria-hidden="true">
+                  <UserRound size={16} />
+                </span>
+                Pasajeros
+                <span className="mo-count">{trip.passengers.length}</span>
               </h2>
 
               <form className="ft-form" onSubmit={addPassenger}>
@@ -333,7 +370,11 @@ export default function FreeTrip() {
 
               <div className="ft-list">
                 {trip.passengers.length === 0 ? (
-                  <p className="muted small">Sin pasajeros registrados.</p>
+                  <div className="dm-empty">
+                    <UserRound size={28} />
+                    <p>Sin pasajeros</p>
+                    <span className="muted small">Agrégalos con el formulario de arriba.</span>
+                  </div>
                 ) : (
                   trip.passengers.map((p) => (
                     <div key={p.id} className="ft-row">
@@ -366,7 +407,11 @@ export default function FreeTrip() {
             {/* Paradas */}
             <div className="driver-card">
               <h2 className="ft-title">
-                <MapPin size={17} /> Paradas ({trip.stops.length})
+                <span className="ft-title-icon" aria-hidden="true">
+                  <MapPin size={16} />
+                </span>
+                Paradas
+                <span className="mo-count">{trip.stops.length}</span>
               </h2>
 
               <form className="ft-form" onSubmit={addStop}>
@@ -390,7 +435,11 @@ export default function FreeTrip() {
 
               <div className="ft-list">
                 {trip.stops.length === 0 ? (
-                  <p className="muted small">Aún no registras paradas.</p>
+                  <div className="dm-empty">
+                    <MapPin size={28} />
+                    <p>Sin paradas</p>
+                    <span className="muted small">Registra cada parada del recorrido.</span>
+                  </div>
                 ) : (
                   trip.stops.map((s) => (
                     <div key={s.id} className="ft-row">

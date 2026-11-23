@@ -10,7 +10,7 @@ import {
   Users,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { up } from '../lib/format'
+import { initials, up } from '../lib/format'
 import type { DriverLinkData, TripStatus } from '../lib/types'
 
 const STATUS_LABEL: Record<TripStatus, string> = {
@@ -95,14 +95,7 @@ export default function DriverHome() {
     : 'Registra quienes van contigo y cada parada'
 
   /** Iniciales del chofer para el avatar del saludo */
-  const initials =
-    driver.full_name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((w) => w[0] ?? '')
-      .join('')
-      .toUpperCase() || 'C'
+  const ini = initials(driver.full_name) || 'C'
 
   return (
     <div className="driver-page">
@@ -121,7 +114,7 @@ export default function DriverHome() {
         {/* Saludo */}
         <div className="driver-card dm-hello">
           <span className="dm-avatar" aria-hidden="true">
-            {initials}
+            {ini}
           </span>
           <span className="dm-hello-text">
             <span className="dm-role">Chofer</span>
@@ -188,7 +181,7 @@ export default function DriverHome() {
               <h2>Viajes pendientes</h2>
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="btn btn-soft btn-sm"
                 onClick={() => setView('menu')}
               >
                 <ArrowLeft size={13} /> Volver
