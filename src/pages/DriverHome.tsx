@@ -94,6 +94,16 @@ export default function DriverHome() {
     ? `${free_trip.passengers.length} pasajero(s) · ${free_trip.stops.length} parada(s)`
     : 'Registra quienes van contigo y cada parada'
 
+  /** Iniciales del chofer para el avatar del saludo */
+  const initials =
+    driver.full_name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0] ?? '')
+      .join('')
+      .toUpperCase() || 'C'
+
   return (
     <div className="driver-page">
       <header className="topbar">
@@ -110,9 +120,14 @@ export default function DriverHome() {
       <main className="driver-main">
         {/* Saludo */}
         <div className="driver-card dm-hello">
-          <span className="muted small">Chofer</span>
-          <strong className="dm-name">{driver.full_name}</strong>
-          <span className="muted small">C.I. {driver.dni}</span>
+          <span className="dm-avatar" aria-hidden="true">
+            {initials}
+          </span>
+          <span className="dm-hello-text">
+            <span className="dm-role">Chofer</span>
+            <strong className="dm-name">{driver.full_name}</strong>
+            <span className="dm-dni">C.I. {driver.dni}</span>
+          </span>
         </div>
 
         {/* Viaje libre activo: acceso directo */}
@@ -122,22 +137,23 @@ export default function DriverHome() {
             className="menu-option mo-live"
             onClick={() => navigate(`/chofer/${token}/libre`)}
           >
-            <span className="mo-icon mo-icon-live">
-              <CircleCheck size={22} />
+            <span className="mo-icon">
+              <CircleCheck size={24} />
             </span>
             <span className="mo-text">
               <span className="mo-title">Viaje libre en curso</span>
               <span className="mo-sub">{libreLabel}</span>
             </span>
-            <ChevronRight size={18} />
+            <span className="mo-badge">En curso</span>
+            <ChevronRight className="mo-arrow" size={18} />
           </button>
         )}
 
-        {/* Menu principal */}
+        {/* Menu principal: tarjetas */}
         <div className="driver-menu">
           <button type="button" className="menu-option" onClick={() => setView('pending')}>
             <span className="mo-icon">
-              <CalendarClock size={22} />
+              <CalendarClock size={24} />
             </span>
             <span className="mo-text">
               <span className="mo-title">Viajes pendientes</span>
@@ -145,7 +161,8 @@ export default function DriverHome() {
                 {trips.length} viaje(s) programado(s) o en curso
               </span>
             </span>
-            <ChevronRight size={18} />
+            {trips.length > 0 && <span className="mo-count">{trips.length}</span>}
+            <ChevronRight className="mo-arrow" size={18} />
           </button>
 
           <button
@@ -154,37 +171,50 @@ export default function DriverHome() {
             onClick={() => navigate(`/chofer/${token}/libre`)}
           >
             <span className="mo-icon">
-              <Play size={22} />
+              <Play size={24} />
             </span>
             <span className="mo-text">
               <span className="mo-title">Viaje libre</span>
               <span className="mo-sub">{libreLabel}</span>
             </span>
-            <ChevronRight size={18} />
+            <ChevronRight className="mo-arrow" size={18} />
           </button>
         </div>
 
         {/* Lista de viajes pendientes */}
         {view === 'pending' && (
           <section className="dm-section">
-            <div className="row spread">
-              <h2 style={{ margin: 0 }}>Viajes pendientes</h2>
-              <button type="button" className="btn btn-sm" onClick={() => setView('menu')}>
+            <div className="dm-section-head">
+              <h2>Viajes pendientes</h2>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setView('menu')}
+              >
                 <ArrowLeft size={13} /> Volver
               </button>
             </div>
 
             {trips.length === 0 ? (
-              <p className="muted">No tienes viajes pendientes.</p>
+              <div className="dm-empty">
+                <CircleCheck size={30} />
+                <p>Sin viajes pendientes</p>
+                <span className="muted small">
+                  Cuando te asignen un viaje aparecerá aquí.
+                </span>
+              </div>
             ) : (
               <div className="dm-list">
                 {trips.map((t) => (
                   <article key={t.id} className="driver-card trip-mini">
-                    <div className="row spread">
+                    <div className="tm-top">
                       <span className={`badge badge-${t.status}`}>
                         {STATUS_LABEL[t.status]}
                       </span>
-                      <span className="muted small">{fmtDateTime(t.departure_at)}</span>
+                      <span className="tm-date">
+                        <CalendarClock size={13} />
+                        {fmtDateTime(t.departure_at)}
+                      </span>
                     </div>
 
                     <div className="tm-route">
@@ -202,11 +232,11 @@ export default function DriverHome() {
                       {t.branch && <span>{up(t.branch)}</span>}
                     </div>
 
-                    {t.notes && <div className="muted small">{t.notes}</div>}
+                    {t.notes && <div className="tm-notes">{t.notes}</div>}
 
                     {t.share_token ? (
                       <Link className="btn btn-primary btn-block" to={`/viaje/${t.share_token}`}>
-                        Abrir viaje
+                        Abrir viaje <ChevronRight size={15} />
                       </Link>
                     ) : (
                       <button type="button" className="btn btn-block" disabled>
