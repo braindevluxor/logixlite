@@ -225,7 +225,7 @@ export default function FreeTrip() {
           />
           LOGIXLITE
         </span>
-        <Link className="btn btn-soft" to={`/chofer/${token}`}>
+        <Link className="btn btn-primary" to={`/chofer/${token}`}>
           <ArrowLeft size={15} /> Menú
         </Link>
       </header>
@@ -273,7 +273,7 @@ export default function FreeTrip() {
               >
                 <Play size={16} /> {busy ? 'Iniciando…' : 'Nuevo viaje libre'}
               </button>
-              <Link className="btn btn-soft btn-block" to={`/chofer/${token}`}>
+              <Link className="btn btn-primary btn-block" to={`/chofer/${token}`}>
                 Volver al menú
               </Link>
             </div>
@@ -300,7 +300,7 @@ export default function FreeTrip() {
               >
                 <Play size={16} /> {busy ? 'Iniciando…' : 'Iniciar viaje libre'}
               </button>
-              <Link className="btn btn-soft btn-block" to={`/chofer/${token}`}>
+              <Link className="btn btn-primary btn-block" to={`/chofer/${token}`}>
                 Volver al menú
               </Link>
             </div>

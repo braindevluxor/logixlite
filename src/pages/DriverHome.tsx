@@ -181,7 +181,7 @@ export default function DriverHome() {
               <h2>Viajes pendientes</h2>
               <button
                 type="button"
-                className="btn btn-soft btn-sm"
+                className="btn btn-primary btn-sm"
                 onClick={() => setView('menu')}
               >
                 <ArrowLeft size={13} /> Volver
