@@ -3041,3 +3041,96 @@ code {
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* ===== Combustible ===== */
+.stat-card.stat-info::after {
+  background: #38bdf8;
+}
+.stat-icon-info {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.stat-info .stat-num {
+  color: #0284c7;
+}
+
+/* Barra de filtros del historial de cargas */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.85rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+.filters .field {
+  margin-bottom: 0;
+}
+.filters .btn {
+  align-self: end;
+}
+
+/* Fila del historial: montos a la derecha */
+.fuel-row-main {
+  min-width: 0;
+}
+.fuel-row-side {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.fuel-amounts {
+  text-align: right;
+  line-height: 1.2;
+}
+.fuel-amounts strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+/* Conversión en vivo Bs → $ dentro del formulario */
+.fuel-convert {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.8rem;
+}
+.fuel-convert strong {
+  font-size: 1.15rem;
+  color: var(--primary);
+}
+
+.badge-gasolina {
+  background: #fef3c7;
+  color: var(--warn);
+}
+.badge-gnv {
+  background: #dbeafe;
+  color: var(--primary);
+}
+
+/* Pill de sistema de combustible en la tarjeta del vehículo */
+.fuel-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0284c7;
+  white-space: nowrap;
+}
+
+/* Ícono girando mientras se consulta la tasa BCV */
+.spin {
+  animation: fuel-spin 1s linear infinite;
+}
+@keyframes fuel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

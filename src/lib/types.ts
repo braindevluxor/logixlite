@@ -23,6 +23,8 @@ export interface Vehicle {
   default_driver_id: number | null
   /** Ruta de la foto en el bucket 'vehicle-photos' */
   photo_path: string | null
+  /** Sistema de combustible: gasolina (Lts), gnv (Vol) o ambos */
+  fuel_system: FuelSystem
 }
 
 export interface Driver {
@@ -38,6 +40,46 @@ export interface Driver {
   link_token?: string | null
   /** Ruta de la foto en el bucket 'driver-photos' */
   photo_path?: string | null
+}
+
+// ------------------------------------------------------------
+// Combustible (Gasolina / GNV)
+// ------------------------------------------------------------
+
+/** Tipo de combustible de una carga */
+export type FuelType = 'gasolina' | 'gnv'
+
+/** Sistema de combustible configurado en el vehículo */
+export type FuelSystem = FuelType | 'ambos'
+
+/** Cómo se pagó la carga */
+export type PaymentMethod = 'electronico' | 'efectivo'
+
+/** Carga de combustible registrada */
+export interface FuelRecord {
+  id: number
+  vehicle_id: number
+  fuel_type: FuelType
+  /** Litros (gasolina) o volumen en m3 (GNV) */
+  quantity: number
+  station: string
+  /** Fecha y hora locales de la carga (ISO) */
+  fueled_at: string
+  amount_bs: number
+  /** Tasa BCV (Bs por 1 USD) usada al registrar */
+  rate: number
+  /** amount_bs / rate (calculado en la base de datos) */
+  amount_usd: number
+  payment_method: PaymentMethod
+  /** Referencia (electrónico) o N° de recibo de Logística (efectivo) */
+  payment_ref: string
+  /** 'bcv' si vino de la API del Banco Central, 'manual' si se escribió a mano */
+  rate_source: 'bcv' | 'manual'
+  /** Fecha valor de la tasa consultada */
+  rate_date: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
 }
 
 export type TripStatus = 'programado' | 'en_curso' | 'finalizado' | 'cancelado'

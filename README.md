@@ -15,6 +15,8 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
    - Crea las tablas `branches`, `vehicles`, `drivers`, `trips`, `trip_passengers`, `trip_destinations`.
    - Activa RLS con acceso para usuarios autenticados.
    - Siembra las 15 sucursales detectadas en la API (branchID 5–20).
+   - Después ejecuta [`supabase/fuel.sql`](supabase/fuel.sql): crea `fuel_records` y el campo
+     `fuel_system` de los vehículos (gasolina / gnv / ambos) para el registro de combustible.
 3. En **Authentication → Providers → Email**, desactiva "Confirm email" si quieres altas de usuario inmediatas.
 4. En **Authentication → Users → Add user**, crea tu usuario y contraseña.
 5. En **Project Settings → API**, copia la **Project URL** y la **anon key**.
@@ -47,6 +49,7 @@ VITE_TALENTO_HUMANO_KEY=PBDFeysVkGLa0zRfq5bYEUtNbmV0akhtN3hFakRES3E2cU82TVE9PQ==
 | **Sucursales** | Listado editable; el *branchID* enlaza con la API de empleados |
 | **Viajes** | Asistente de 4 pasos: vehículo + chofer → pasajeros (API por sucursal, con cupo) → destinos con orden → confirmar |
 | **Detalle del viaje** | Cambiar estado (programado → en curso → finalizado/cancelado), ver pasajeros y destinos |
+| **Combustible** | Registro de cargas por vehículo: Gasolina (**Lts**) o GNV (**Vol**), estación, fecha/hora, monto en Bs con conversión a **$** usando la tasa BCV del día, y pago **Electrónico** (referencia) o **Efectivo** (N° de recibo de Logística). Historial filtrable + totales |
 
 ### API de pasajeros
 
@@ -73,6 +76,22 @@ Devuelve: `dni, name, lastname, role_name, department_name, branch_id, branch_na
 >
 >   La app la usa automáticamente al hacer `npm run build` (la URL se deriva de
 >   `VITE_SUPABASE_URL`). Opcional: define `VITE_TALENTO_BASE` para forzar otra.
+
+### Tasa BCV (combustible)
+
+La pantalla **Combustible** trae la tasa del Banco Central del día en `Bs por 1 $`. Se prueban
+varias fuentes públicas en orden hasta que una responda (todas envían
+`Access-Control-Allow-Origin: *`, así que el navegador las llama directamente, sin proxy):
+
+```
+1. https://bcv.today/api/v1/rate.json          → { USD, effective_date }
+2. https://bcvhoy.com/api/tasas                → { oficial, oficial_updated }
+3. https://datos.cromstudio.com.ve/tasa        → { tasas.USD, actualizado_el }
+```
+
+Si ninguna responde, el formulario permite **escribir la tasa a mano** (queda como
+`rate_source = manual`). La tasa se guarda en cada registro y el monto en $ se calcula
+una sola vez (`amount_bs / rate`), así el histórico no cambia aunque cambie la tasa.
 
 ## 4. Build e instalación (PWA)
 

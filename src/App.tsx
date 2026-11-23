@@ -11,6 +11,7 @@ import {
   Bus,
   CalendarDays,
   Car,
+  Fuel,
   House,
   IdCard,
   Search,
@@ -26,6 +27,7 @@ import DayPlan from './pages/DayPlan'
 import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Branches from './pages/Branches'
+import FuelPage from './pages/Fuel'
 import Trips from './pages/Trips'
 import TripCreate from './pages/TripCreate'
 import TripDetail from './pages/TripDetail'
@@ -44,6 +46,7 @@ const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[
   { to: '/planificacion', label: 'Plan', icon: CalendarDays },
   { to: '/viajes', label: 'Viajes', icon: Bus },
   { to: '/vehiculos', label: 'Vehículos', icon: Car },
+  { to: '/combustible', label: 'Combustible', icon: Fuel },
   { to: '/choferes', label: 'Choferes', icon: IdCard },
 ]
 
@@ -66,9 +69,11 @@ function Shell({ children }: { children: ReactNode }) {
   const searchPlaceholder =
     location.pathname === '/vehiculos'
       ? 'Buscar por placa, marca o modelo…'
-      : location.pathname === '/choferes'
-        ? 'Buscar por nombre o cédula…'
-        : null
+      : location.pathname === '/combustible'
+        ? 'Buscar por placa o estación…'
+        : location.pathname === '/choferes'
+          ? 'Buscar por nombre o cédula…'
+          : null
 
   // En movil, al desplegar el campo se enfoca automaticamente
   useEffect(() => {
@@ -197,6 +202,16 @@ export default function App() {
           <Protected>
             <Shell>
               <Vehicles />
+            </Shell>
+          </Protected>
+        }
+      />
+      <Route
+        path="/combustible"
+        element={
+          <Protected>
+            <Shell>
+              <FuelPage />
             </Shell>
           </Protected>
         }

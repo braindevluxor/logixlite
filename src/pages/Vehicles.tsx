@@ -13,7 +13,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { removeVehiclePhoto, uploadVehiclePhoto, vehiclePhotoUrl } from '../lib/photos'
 import { useSearch } from '../search/SearchContext'
-import type { Driver, Vehicle, VehicleStatus } from '../lib/types'
+import type { Driver, FuelSystem, Vehicle, VehicleStatus } from '../lib/types'
 
 /** Cada cuantos KM se le debe hacer el cambio de aceite */
 const OIL_CHANGE_KM = 5000
@@ -36,12 +36,19 @@ const EMPTY: Partial<Vehicle> = {
   notes: '',
   default_driver_id: null,
   photo_path: null,
+  fuel_system: 'ambos',
 }
 
 const STATUS_LABELS: Record<VehicleStatus, string> = {
   activo: 'Activo',
   mantenimiento: 'Mantenimiento',
   inactivo: 'Inactivo',
+}
+
+const FUEL_SYSTEM_LABELS: Record<FuelSystem, string> = {
+  gasolina: 'Gasolina',
+  gnv: 'GNV',
+  ambos: 'Gasolina + GNV',
 }
 
 export default function Vehicles() {
@@ -177,6 +184,7 @@ export default function Vehicles() {
       status: form.status ?? 'activo',
       notes: form.notes?.trim() || null,
       default_driver_id: form.default_driver_id ?? null,
+      fuel_system: form.fuel_system ?? 'ambos',
     }
     if (!payload.plate) return setError('La placa es obligatoria')
     if (!payload.capacity || payload.capacity < 1)
@@ -204,7 +212,11 @@ export default function Vehicles() {
       if (saveErr) {
         if (uploadedPath) removeVehiclePhoto(uploadedPath) // no dejar huérfana
         setError(
-          saveErr.code === '23505' ? 'Ya existe un vehículo con esa placa' : saveErr.message
+          saveErr.code === '23505'
+            ? 'Ya existe un vehículo con esa placa'
+            : saveErr.code === '42703'
+              ? 'Falta el campo de combustible: ejecuta supabase/fuel.sql en Supabase → SQL Editor y recarga.'
+              : saveErr.message
         )
         return
       }
@@ -338,6 +350,9 @@ export default function Vehicles() {
 
                   <div className="veh-tags">
                     <span className="capacity-pill">{v.capacity} puestos</span>
+                    <span className="fuel-pill">
+                      {FUEL_SYSTEM_LABELS[v.fuel_system ?? 'ambos']}
+                    </span>
                     {driver && (
                       <span className="veh-driver">
                         <UserRound size={12} /> {driver}
@@ -533,6 +548,26 @@ export default function Vehicles() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="field">
+              <span>Sistema de combustible</span>
+              <div className="seg">
+                {(Object.keys(FUEL_SYSTEM_LABELS) as FuelSystem[]).map((s) => (
+                  <button
+                    type="button"
+                    key={s}
+                    className={(form.fuel_system ?? 'ambos') === s ? 'active' : ''}
+                    onClick={() => setForm({ ...form, fuel_system: s })}
+                  >
+                    {FUEL_SYSTEM_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+              <span className="muted small">
+                Define qué puede registrar en <strong>Combustible</strong>: gasolina en Lts, GNV
+                en Vol, o ambos.
+              </span>
             </div>
 
             <label className="field">
