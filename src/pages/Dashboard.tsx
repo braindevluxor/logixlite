@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -103,6 +103,20 @@ function daysAgoISO(n: number): string {
   return localISO(d)
 }
 
+/** Lista de fechas (YYYY-MM-DD) entre from y to, inclusive */
+function eachDay(from: string, to: string): string[] {
+  const out: string[] = []
+  const d = new Date(`${from}T00:00:00`)
+  const end = new Date(`${to}T00:00:00`)
+  let guard = 0
+  while (d <= end && guard < 400) {
+    out.push(localISO(d))
+    d.setDate(d.getDate() + 1)
+    guard++
+  }
+  return out
+}
+
 
 // ===== Dona generica (SVG a mano) =====
 function Donut({
@@ -180,6 +194,168 @@ function Donut({
           <text x="100" y="135" textAnchor="middle" className="donut-center-dept">
             {active.name.length > 22 ? active.name.slice(0, 21) + '…' : active.name}
           </text>
+        )}
+      </svg>
+    </div>
+  )
+}
+
+// ===== Grafico de curvas: viajes por dia =====
+function LineChart({
+  data,
+  onSelect,
+}: {
+  data: { date: string; count: number }[]
+  /** clic en un dia: abre el listado de viajes de esa fecha */
+  onSelect?: (date: string) => void
+}) {
+  const [hover, setHover] = useState<number | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(720)
+
+  // Se adapta al ancho real del contenedor (sin escalar el SVG,
+  // asi el texto queda nitido y la altura se mantiene)
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const update = () => setWidth(Math.max(320, Math.round(el.clientWidth)))
+    update()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update)
+      return () => window.removeEventListener('resize', update)
+    }
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const W = width
+  const H = 240
+  const PAD_L = 38
+  const PAD_R = 16
+  const PAD_T = 22
+  const PAD_B = 34
+
+  const max = Math.max(1, ...data.map((d) => d.count))
+  const innerW = W - PAD_L - PAD_R
+  const innerH = H - PAD_T - PAD_B
+  const baseY = PAD_T + innerH
+
+  const px = (i: number) =>
+    PAD_L + (data.length > 1 ? (i * innerW) / (data.length - 1) : innerW / 2)
+  const py = (v: number) => baseY - (v / max) * innerH
+
+  // Sumatoria acumulada de viajes dia a dia
+  let run = 0
+  const acc = data.map((d) => (run += d.count))
+
+  const pts = data.map((d, i) => ({ x: px(i), y: py(d.count) }))
+
+  // Curva suave (bezier) que pasa por todos los puntos
+  let path = ''
+  if (pts.length > 0) {
+    path = `M ${pts[0].x} ${pts[0].y}`
+    for (let i = 1; i < pts.length; i++) {
+      const p0 = pts[i - 1]
+      const p1 = pts[i]
+      const cx = (p0.x + p1.x) / 2
+      path += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`
+    }
+  }
+
+  const area =
+    pts.length > 1
+      ? `${path} L ${pts[pts.length - 1].x} ${baseY} L ${pts[0].x} ${baseY} Z`
+      : ''
+
+  const gridVals = [max, Math.max(1, Math.round(max / 2)), 0]
+  const labelEvery = Math.max(1, Math.ceil(data.length / 7))
+  const hitW = data.length > 1 ? innerW / (data.length - 1) : innerW
+  const showDots = data.length <= 62
+
+  return (
+    <div className="line-scroll" ref={wrapRef}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="line-chart"
+        role="img"
+        aria-label="Viajes por día"
+      >
+        <defs>
+          <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* Lineas de referencia del eje Y */}
+        {gridVals.map((v) => (
+          <g key={`g${v}`}>
+            <line
+              x1={PAD_L}
+              y1={py(v)}
+              x2={W - PAD_R}
+              y2={py(v)}
+              className="line-grid"
+            />
+            <text x={PAD_L - 7} y={py(v) + 3} textAnchor="end" className="line-axis">
+              {v}
+            </text>
+          </g>
+        ))}
+
+        {area && <path d={area} fill="url(#lineGrad)" />}
+        <path d={path} className="line-path" />
+
+        {/* Puntos y valor del dia activo */}
+        {pts.map((p, i) => (
+          <g key={`p${i}`} className="line-point">
+            {showDots && (
+              <circle cx={p.x} cy={p.y} r={hover === i ? 5 : 3} className="line-dot" />
+            )}
+            <text
+              x={p.x}
+              y={p.y - 11}
+              textAnchor="middle"
+              className="line-value"
+              opacity={hover === i ? 1 : 0}
+            >
+              {data[i].count}
+            </text>
+          </g>
+        ))}
+
+        {/* Zonas de hover / clic por dia */}
+        {data.map((d, i) => (
+          <rect
+            key={`h${i}`}
+            className="line-hit"
+            x={px(i) - hitW / 2}
+            y={PAD_T}
+            width={hitW}
+            height={innerH}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+            onClick={() => onSelect?.(d.date)}
+            style={{ cursor: onSelect ? 'pointer' : 'default' }}
+          >
+            <title>{`${d.date.slice(8, 10)}/${d.date.slice(5, 7)}: ${d.count} viaje(s) · acumulado ${acc[i]}`}</title>
+          </rect>
+        ))}
+
+        {/* Etiquetas del eje X (fechas) */}
+        {data.map((d, i) =>
+          i % labelEvery === 0 || i === data.length - 1 ? (
+            <text
+              key={`x${i}`}
+              x={px(i)}
+              y={H - 10}
+              textAnchor="middle"
+              className="line-axis"
+            >
+              {d.date.slice(8, 10)}/{d.date.slice(5, 7)}
+            </text>
+          ) : null
         )}
       </svg>
     </div>
@@ -359,6 +535,8 @@ export default function Dashboard() {
   const [hourAll, setHourAll] = useState(false)
   // ---- Detalle al clickear una hora del grafico de horas ----
   const [hourModal, setHourModal] = useState<number | null>(null)
+  // ---- Detalle al clickear un dia del grafico de curvas ----
+  const [dayModal, setDayModal] = useState<string | null>(null)
 
   /**
    * Hora del dia con mas viajes de salida (0-23), ordenada de
@@ -385,6 +563,28 @@ export default function Dashboard() {
       .filter((t) => new Date(t.departure_at).getHours() === hourModal)
       .sort((a, b) => a.departure_at.localeCompare(b.departure_at))
   }, [hourModal, trips])
+
+  /**
+   * Viajes por dia del rango completo (incluye los dias sin
+   * viajes, para que la curva sea continua). La sumatoria
+   * acumulada se calcula dentro del grafico.
+   */
+  const dailyTrips = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const t of trips) {
+      const key = localISO(new Date(t.departure_at))
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return eachDay(from, to).map((date) => ({ date, count: counts.get(date) ?? 0 }))
+  }, [trips, from, to])
+
+  /** Viajes del dia clickeado (para el modal) */
+  const dayTrips = useMemo(() => {
+    if (!dayModal) return []
+    return trips
+      .filter((t) => localISO(new Date(t.departure_at)) === dayModal)
+      .sort((a, b) => a.departure_at.localeCompare(b.departure_at))
+  }, [dayModal, trips])
 
   /** Pasajeros del departamento elegido: nombre, destino, hora y fecha */
   const deptRows = useMemo(() => {
@@ -660,6 +860,31 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* ---- Curva: viajes por día (sumatoria) ---- */}
+          <div className="card chart-card chart-card-wide">
+            <div className="chart-head">
+              <div>
+                <h2 className="chart-title">Viajes por día</h2>
+                <p className="chart-sub">
+                  {stats.total} viaje(s) en el período · la curva acumula la sumatoria
+                  día a día (pasa el mouse para ver el acumulado)
+                </p>
+              </div>
+              <span className="chart-badge">
+                <ArrowRight size={13} /> {from} → {to}
+              </span>
+            </div>
+
+            {trips.length === 0 ? (
+              <div className="chart-empty">
+                <Calendar size={28} />
+                <p>No hay viajes en el rango de fechas seleccionado.</p>
+              </div>
+            ) : (
+              <LineChart data={dailyTrips} onSelect={setDayModal} />
+            )}
           </div>
 
           {/* ---- Gráficos ---- */}
@@ -1051,6 +1276,70 @@ export default function Dashboard() {
                         {new Date(t.departure_at).toLocaleDateString('es-VE', {
                           dateStyle: 'medium',
                         })}
+                      </span>
+                    </div>
+                    <div className="pending-side">
+                      <span className={`badge badge-${t.status}`}>
+                        {STATUS_LABEL[t.status]}
+                      </span>
+                      <ArrowRight size={16} className="pending-arrow" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: viajes de un día ===== */}
+      {dayModal && (
+        <div className="modal-backdrop" onClick={() => setDayModal(null)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Viajes del día"
+          >
+            <div className="modal-head">
+              <div>
+                <h2>
+                  <Calendar size={18} />{' '}
+                  {new Date(`${dayModal}T00:00:00`).toLocaleDateString('es-VE', {
+                    dateStyle: 'full',
+                  })}
+                </h2>
+                <p className="muted small">{dayTrips.length} viaje(s) en este día</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setDayModal(null)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {dayTrips.length === 0 ? (
+              <div className="chart-empty">
+                <Calendar size={28} />
+                <p>Sin viajes en esta fecha.</p>
+              </div>
+            ) : (
+              <div className="pending-list">
+                {dayTrips.map((t) => (
+                  <Link
+                    key={t.id}
+                    to={`/viajes/${t.id}`}
+                    className="pending-row"
+                    onClick={() => setDayModal(null)}
+                  >
+                    <div className="pending-main">
+                      <strong>{fmtTime12(t.departure_at)}</strong>
+                      <span className="muted small">
+                        {fmtHour(new Date(t.departure_at).getHours())} · viaje #{t.id}
                       </span>
                     </div>
                     <div className="pending-side">
