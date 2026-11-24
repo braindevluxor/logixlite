@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Calendar,
   ChevronDown,
-  ChevronUp,
   CircleCheck,
   Clock,
   Route,
@@ -498,10 +497,9 @@ export default function Dashboard() {
   const [deptModal, setDeptModal] = useState<string | null>(null)
   // ---- Detalle al clickear una parada/destino del segundo grafico ----
   const [stopModal, setStopModal] = useState<string | null>(null)
-  // ---- Leyendas: maximo 5 filas visibles y despues "Ver mas" ----
-  const [deptAll, setDeptAll] = useState(false)
-  const [stopAll, setStopAll] = useState(false)
-  const [hourAll, setHourAll] = useState(false)
+  // ---- Leyendas: maximo 5 filas visibles; "Ver mas" abre un
+  // modal con la lista completa para no deformar el dashboard ----
+  const [moreChart, setMoreChart] = useState<'dept' | 'stop' | 'hour' | null>(null)
   // ---- Detalle al clickear una hora del grafico de horas ----
   const [hourModal, setHourModal] = useState<number | null>(null)
   // ---- Detalle al clickear un dia del grafico de curvas ----
@@ -821,7 +819,7 @@ export default function Dashboard() {
                   onSelect={setDeptModal}
                 />
                 <ul className="chart-legend">
-                  {(deptAll ? topDepts : topDepts.slice(0, LEGEND_MAX)).map((d) => {
+                  {topDepts.slice(0, LEGEND_MAX).map((d) => {
                     const p = Math.round((d.count / totalTraslados) * 100)
                     return (
                       <li
@@ -848,24 +846,16 @@ export default function Dashboard() {
                       className="legend-more"
                       role="button"
                       tabIndex={0}
-                      onClick={() => setDeptAll((v) => !v)}
+                      onClick={() => setMoreChart('dept')}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          setDeptAll((v) => !v)
+                          setMoreChart('dept')
                         }
                       }}
                     >
-                      {deptAll ? (
-                        <>
-                          <ChevronUp size={13} /> Ver menos
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown size={13} /> Ver más (
-                          {topDepts.length - LEGEND_MAX} más)
-                        </>
-                      )}
+                      <ChevronDown size={13} /> Ver más ({topDepts.length - LEGEND_MAX}{' '}
+                      más)
                     </li>
                   )}
                 </ul>
@@ -904,7 +894,7 @@ export default function Dashboard() {
                   onSelect={setStopModal}
                 />
                 <ul className="chart-legend">
-                  {(stopAll ? stopDonut : stopDonut.slice(0, LEGEND_MAX)).map((d) => (
+                  {stopDonut.slice(0, LEGEND_MAX).map((d) => (
                     <li
                       key={d.name}
                       className="legend-clickable"
@@ -921,24 +911,16 @@ export default function Dashboard() {
                       className="legend-more"
                       role="button"
                       tabIndex={0}
-                      onClick={() => setStopAll((v) => !v)}
+                      onClick={() => setMoreChart('stop')}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          setStopAll((v) => !v)
+                          setMoreChart('stop')
                         }
                       }}
                     >
-                      {stopAll ? (
-                        <>
-                          <ChevronUp size={13} /> Ver menos
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown size={13} /> Ver más (
-                          {stopDonut.length - LEGEND_MAX} más)
-                        </>
-                      )}
+                      <ChevronDown size={13} /> Ver más ({stopDonut.length - LEGEND_MAX}{' '}
+                      más)
                     </li>
                   )}
                 </ul>
@@ -970,7 +952,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <ul className="hour-list">
-                {(hourAll ? hourStats : hourStats.slice(0, LEGEND_MAX)).map((h) => {
+                {hourStats.slice(0, LEGEND_MAX).map((h) => {
                   const p = hourMax > 0 ? Math.round((h.count / hourMax) * 100) : 0
                   return (
                     <li
@@ -1003,24 +985,16 @@ export default function Dashboard() {
                     className="legend-more"
                     role="button"
                     tabIndex={0}
-                    onClick={() => setHourAll((v) => !v)}
+                    onClick={() => setMoreChart('hour')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        setHourAll((v) => !v)
+                        setMoreChart('hour')
                       }
                     }}
                   >
-                    {hourAll ? (
-                      <>
-                        <ChevronUp size={13} /> Ver menos
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown size={13} /> Ver más (
-                        {hourStats.length - LEGEND_MAX} más)
-                      </>
-                    )}
+                    <ChevronDown size={13} /> Ver más (
+                    {hourStats.length - LEGEND_MAX} más)
                   </li>
                 )}
               </ul>
@@ -1028,6 +1002,129 @@ export default function Dashboard() {
           </div>
           </div>
         </>
+      )}
+
+      {/* ===== Modal: lista completa de un gráfico ("Ver más") ===== */}
+      {moreChart && (
+        <div className="modal-backdrop" onClick={() => setMoreChart(null)}>
+          <div
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lista completa del gráfico"
+          >
+            <div className="modal-head">
+              <div>
+                <h2>
+                  {moreChart === 'dept'
+                    ? 'Departamentos con más traslados'
+                    : moreChart === 'stop'
+                      ? 'Paradas / destinos del período'
+                      : 'Horas con más viajes'}
+                </h2>
+                <p className="muted small">
+                  {moreChart === 'dept'
+                    ? `${topDepts.length} en el gráfico · ${totalTraslados} traslado(s)`
+                    : moreChart === 'stop'
+                      ? `${stopDonut.length} en el gráfico · ${stopStats.uniqueCount} parada(s) única(s)`
+                      : `${hourStats.length} en el gráfico · ${trips.length} viaje(s)`}
+                  {' · '}
+                  {from} → {to}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setMoreChart(null)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Departamentos: clic abre el detalle de pasajeros */}
+            {moreChart === 'dept' && (
+              <ul className="chart-legend legend-modal">
+                {topDepts.map((d) => {
+                  const p = Math.round((d.count / totalTraslados) * 100)
+                  return (
+                    <li
+                      key={d.name}
+                      className="legend-clickable"
+                      onClick={() => {
+                        setDeptModal(d.name)
+                        setMoreChart(null)
+                      }}
+                      title="Ver los pasajeros de este departamento"
+                    >
+                      <span className="legend-dot" style={{ background: d.color }} />
+                      <span className="legend-name">{d.name}</span>
+                      <span className="legend-pct">{p}%</span>
+                      <span className="legend-track">
+                        <span
+                          className="legend-fill"
+                          style={{ width: `${p}%`, background: d.color }}
+                        />
+                      </span>
+                      <strong className="legend-count">{d.count}</strong>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+
+            {/* Paradas: clic abre el detalle de pasajeros */}
+            {moreChart === 'stop' && (
+              <ul className="chart-legend legend-modal">
+                {stopDonut.map((d) => (
+                  <li
+                    key={d.name}
+                    className="legend-clickable"
+                    onClick={() => {
+                      setStopModal(d.name)
+                      setMoreChart(null)
+                    }}
+                    title="Ver los pasajeros que bajaron aquí"
+                  >
+                    <span className="legend-dot" style={{ background: d.color }} />
+                    <span className="legend-name">{d.name}</span>
+                    <strong className="legend-count">{d.count} viajes</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Horas: clic abre los viajes de esa hora */}
+            {moreChart === 'hour' && (
+              <ul className="hour-list legend-modal">
+                {hourStats.map((h) => {
+                  const p = hourMax > 0 ? Math.round((h.count / hourMax) * 100) : 0
+                  return (
+                    <li
+                      key={h.hour}
+                      className="hour-row legend-clickable"
+                      onClick={() => {
+                        setHourModal(h.hour)
+                        setMoreChart(null)
+                      }}
+                      title="Ver los viajes de esta hora"
+                    >
+                      <span className="hour-label">{fmtHour(h.hour)}</span>
+                      <span className="legend-track hour-track">
+                        <span
+                          className="legend-fill"
+                          style={{ width: `${p}%`, background: '#2563eb' }}
+                        />
+                      </span>
+                      <strong className="hour-count">{h.count}</strong>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ===== Modal: pasajeros de un departamento ===== */}

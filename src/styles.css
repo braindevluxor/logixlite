@@ -2757,6 +2757,14 @@ textarea {
   background: #eff6ff;
 }
 
+/* Lista completa dentro del modal "Ver mas" (con scroll propio
+   para que el dashboard no cambie de altura) */
+.legend-modal {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
 /* ===== Grafico: horas con mas viajes ===== */
 .hour-list {
   list-style: none;
