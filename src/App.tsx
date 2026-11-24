@@ -15,6 +15,7 @@ import {
   Fuel,
   House,
   IdCard,
+  MapPin,
   RotateCcw,
   Search,
   X,
@@ -31,6 +32,7 @@ import DayPlan from './pages/DayPlan'
 import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Branches from './pages/Branches'
+import Locations from './pages/Locations'
 import FuelPage from './pages/Fuel'
 import Trips from './pages/Trips'
 import TripCreate from './pages/TripCreate'
@@ -54,6 +56,7 @@ const NAV_ITEMS: { to: string; label: string; icon: LucideIcon; end?: boolean }[
   { to: '/vehiculos', label: 'Vehículos', icon: Car },
   { to: '/combustible', label: 'Combustible', icon: Fuel },
   { to: '/choferes', label: 'Choferes', icon: IdCard },
+  { to: '/ubicaciones', label: 'Ubicaciones', icon: MapPin },
 ]
 
 function Protected({ children }: { children: ReactNode }) {
@@ -87,7 +90,9 @@ function Shell({ children }: { children: ReactNode }) {
         ? 'Buscar por placa o estación…'
         : location.pathname === '/choferes'
           ? 'Buscar por nombre o cédula…'
-          : null
+          : location.pathname === '/ubicaciones'
+            ? 'Buscar ubicación…'
+            : null
 
   // En movil, al desplegar el campo se enfoca automaticamente
   useEffect(() => {
@@ -294,6 +299,16 @@ export default function App() {
           <Protected>
             <Shell>
               <Drivers />
+            </Shell>
+          </Protected>
+        }
+      />
+      <Route
+        path="/ubicaciones"
+        element={
+          <Protected>
+            <Shell>
+              <Locations />
             </Shell>
           </Protected>
         }

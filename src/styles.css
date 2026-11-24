@@ -2625,6 +2625,35 @@ button.maps-link:hover {
   color: var(--warn);
 }
 
+/* ===== Pantalla Ubicaciones (gestión del catálogo) ===== */
+.loc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.loc-info a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.loc-missing-badge {
+  display: inline-block;
+  margin-left: 0.55rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: var(--warn);
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .route-map .map-frame {
   margin-bottom: 0.6rem;
   background: var(--surface);
