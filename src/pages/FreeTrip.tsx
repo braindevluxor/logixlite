@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -8,13 +8,15 @@ import {
   MapPin,
   Play,
   Plus,
+  Search,
   UserRound,
   X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
+import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
-import type { DriverLinkData } from '../lib/types'
+import type { ApiEmployee, DriverLinkData } from '../lib/types'
 
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString('es-VE', {
@@ -65,6 +67,12 @@ export default function FreeTrip() {
     finished_at: string
   } | null>(null)
 
+  // ---- Busqueda en la nomina de trabajadores (API) ----
+  const [empQuery, setEmpQuery] = useState('')
+  const [employees, setEmployees] = useState<ApiEmployee[]>([])
+  const [empState, setEmpState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [empError, setEmpError] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     if (!token) {
       setError('Enlace incompleto.')
@@ -93,12 +101,86 @@ export default function FreeTrip() {
     load()
   }, [load])
 
+  /**
+   * Consulta la nomina de TODAS las sucursales (una sola vez y
+   * deja el resultado en cache) para buscar pasajeros mientras
+   * se escribe. Si la funcion public_branches no existe todavia,
+   * avisa y permite registrar al pasajero manualmente.
+   */
+  const loadEmployees = useCallback(async () => {
+    if (empState === 'loading' || empState === 'ready') return
+    setEmpState('loading')
+    setEmpError(null)
+    try {
+      const { data: br, error: brErr } = await supabase.rpc('public_branches')
+      if (brErr) {
+        throw new Error(
+          brErr.message.includes('public_branches')
+            ? 'SIN_SQL'
+            : brErr.message
+        )
+      }
+      const branches = (br ?? []) as { external_id: number; name: string }[]
+      if (branches.length === 0) throw new Error('No hay sucursales registradas')
+
+      const results = await Promise.allSettled(
+        branches.map((b) => fetchEmployees(b.external_id))
+      )
+      const ok = results.filter(
+        (r): r is PromiseFulfilledResult<ApiEmployee[]> => r.status === 'fulfilled'
+      )
+      if (ok.length === 0) throw new Error('La nómina no respondió en ninguna sucursal')
+
+      // Dedupe por cédula (una cédula puede aparecer en 2 sucursales)
+      const seen = new Set<string>()
+      const all = ok.flatMap((r) => r.value).filter((e) => {
+        const dni = String(e.dni)
+        if (seen.has(dni)) return false
+        seen.add(dni)
+        return true
+      })
+
+      setEmployees(all)
+      setEmpState('ready')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al consultar la nómina'
+      setEmpError(
+        msg === 'SIN_SQL'
+          ? 'Para buscar en la nómina ejecuta supabase/public_branches.sql en Supabase. Mientras tanto, registra al pasajero manualmente.'
+          : `${msg}. Puedes registrar al pasajero manualmente.`
+      )
+      setEmpState('error')
+    }
+  }, [empState])
+
   function flash(msg: string) {
     setToast(msg)
     window.setTimeout(() => setToast(null), 2600)
   }
 
   const trip = data?.free_trip ?? null
+
+  /** Cédulas ya agregadas al viaje libre (para marcarlas) */
+  const addedDnis = useMemo(
+    () => new Set((trip?.passengers ?? []).map((p) => p.dni ?? '')),
+    [trip]
+  )
+
+  /** Resultados de la nómina según lo escrito (máximo 8) */
+  const empResults = useMemo(() => {
+    const q = empQuery.trim().toLowerCase()
+    if (!q || empState !== 'ready') return []
+    return employees
+      .filter(
+        (e) =>
+          employeeFullName(e).toLowerCase().includes(q) ||
+          String(e.dni).includes(q) ||
+          (e.role_name ?? '').toLowerCase().includes(q) ||
+          (e.department_name ?? '').toLowerCase().includes(q) ||
+          (e.branch_name ?? '').toLowerCase().includes(q)
+      )
+      .slice(0, 8)
+  }, [empQuery, empState, employees])
 
   // ---- Acciones ----
   async function start() {
@@ -119,7 +201,7 @@ export default function FreeTrip() {
     setAddingP(true)
     const { error: rpcErr } = await supabase.rpc('driver_free_add_passenger', {
       p_token: token,
-      p_name: pName.trim(),
+      p_name: pName.trim().toUpperCase(),
       p_dni: pDni.trim() || null,
       p_phone: pPhone.trim() || null,
     })
@@ -128,6 +210,23 @@ export default function FreeTrip() {
     setPName('')
     setPDni('')
     setPPhone('')
+    flash('Pasajero agregado')
+    load()
+  }
+
+  /** Agrega un trabajador encontrado en la nómina */
+  async function addFromApi(e: ApiEmployee) {
+    if (addingP) return
+    setAddingP(true)
+    const { error: rpcErr } = await supabase.rpc('driver_free_add_passenger', {
+      p_token: token,
+      p_name: employeeFullName(e).toUpperCase(),
+      p_dni: String(e.dni),
+      p_phone: (e.phone ?? '').trim() || null,
+    })
+    setAddingP(false)
+    if (rpcErr) return flash(`Error: ${rpcErr.message}`)
+    setEmpQuery('')
     flash('Pasajero agregado')
     load()
   }
@@ -148,8 +247,8 @@ export default function FreeTrip() {
     setAddingS(true)
     const { error: rpcErr } = await supabase.rpc('driver_free_add_stop', {
       p_token: token,
-      p_name: sName.trim(),
-      p_note: sNote.trim() || null,
+      p_name: sName.trim().toUpperCase(),
+      p_note: sNote.trim() ? sNote.trim().toUpperCase() : null,
     })
     setAddingS(false)
     if (rpcErr) return flash(`Error: ${rpcErr.message}`)
@@ -226,6 +325,12 @@ export default function FreeTrip() {
           title: 'Viaje libre en curso',
           description:
             'Muestra la hora en que iniciaste. Desde aquí finalizas el viaje cuando termines el recorrido.',
+        },
+        {
+          target: '[data-tour="p-search"]',
+          title: 'Buscar en la nómina',
+          description:
+            'Escribe el nombre o la cédula para traer al pasajero desde la nómina de trabajadores y agregarlo con un toque. Si no aparece en la nómina, regístralo manualmente abajo.',
         },
         {
           target: '[data-tour="p-name"]',
@@ -405,6 +510,77 @@ export default function FreeTrip() {
                 Pasajeros
                 <span className="mo-count">{trip.passengers.length}</span>
               </h2>
+
+              {/* Buscar en la nomina de trabajadores (API) */}
+              <div className="ft-form">
+                <input
+                  className="grow"
+                  type="search"
+                  data-tour="p-search"
+                  value={empQuery}
+                  onChange={(e) => {
+                    setEmpQuery(e.target.value)
+                    if (empState === 'idle') void loadEmployees()
+                  }}
+                  placeholder="Buscar en la nomina (nombre o cedula)"
+                  aria-label="Buscar pasajero en la nómina"
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void loadEmployees()}
+                  disabled={empState === 'loading'}
+                >
+                  <Search size={15} /> {empState === 'loading' ? 'Cargando…' : 'Buscar'}
+                </button>
+              </div>
+
+              {empState === 'loading' && (
+                <p className="muted ft-hint">Consultando la nómina de trabajadores…</p>
+              )}
+
+              {empState === 'error' && empError && (
+                <div className="alert alert-warn ft-hint">{empError}</div>
+              )}
+
+              {empResults.length > 0 && (
+                <ul className="ft-results">
+                  {empResults.map((e) => {
+                    const dni = String(e.dni)
+                    const already = addedDnis.has(dni)
+                    return (
+                      <li key={dni} className="ft-result">
+                        <span className="ft-result-text">
+                          <strong>{up(employeeFullName(e))}</strong>
+                          <span className="muted small">
+                            C.I. {dni}
+                            {e.role_name ? ` · ${up(e.role_name)}` : ''}
+                            {e.department_name ? ` · ${up(e.department_name)}` : ''}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary"
+                          disabled={already || addingP}
+                          onClick={() => void addFromApi(e)}
+                        >
+                          <Plus size={14} /> {already ? 'Agregado' : 'Agregar'}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+
+              {empState === 'ready' && empQuery.trim() && empResults.length === 0 && (
+                <p className="muted ft-hint">
+                  Sin coincidencias en la nómina: regístralo manualmente abajo.
+                </p>
+              )}
+
+              <div className="ft-or">
+                <span>o registro manual</span>
+              </div>
 
               <form className="ft-form" onSubmit={addPassenger}>
                 <input

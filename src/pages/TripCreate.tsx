@@ -422,7 +422,7 @@ export default function TripCreate() {
 
   function addManualPassenger(e: FormEvent) {
     e.preventDefault()
-    const name = manualName.trim()
+    const name = manualName.trim().toUpperCase()
     const dni = manualDni.trim()
 
     if (!name) return setManualError('El nombre es obligatorio')
@@ -441,7 +441,7 @@ export default function TripCreate() {
       {
         dni,
         full_name: name,
-        role_name: manualRole.trim() || null,
+        role_name: manualRole.trim() ? manualRole.trim().toUpperCase() : null,
         department: null,
         branch_id: null,
         manual: true,
@@ -503,7 +503,7 @@ export default function TripCreate() {
    */
   async function pickLocation(rawName: string) {
     if (pickBusy) return
-    const name = rawName.trim()
+    const name = rawName.trim().toUpperCase()
     if (!name) return
     const target = picker
     if (!target) return
@@ -739,7 +739,7 @@ export default function TripCreate() {
           vehicle_id: vehicleId,
           driver_id: driverId,
           departure_at: new Date(departureAt).toISOString(),
-          notes: notes.trim() || null,
+          notes: notes.trim() ? notes.trim().toUpperCase() : null,
           track_km: trackKm,
         })
         .eq('id', Number(editId))
@@ -789,7 +789,7 @@ export default function TripCreate() {
           vehicle_id: vehicleId,
           driver_id: driverId,
           departure_at: new Date(departureAt).toISOString(),
-          notes: notes.trim() || null,
+          notes: notes.trim() ? notes.trim().toUpperCase() : null,
           track_km: trackKm,
           created_by: session?.user.id ?? null,
         })
@@ -812,8 +812,8 @@ export default function TripCreate() {
         destinations.map((d) => ({
           trip_id: tripId,
           position: d.position,
-          name: d.name,
-          notes: d.notes,
+          name: d.name.toUpperCase(),
+          notes: d.notes ? d.notes.toUpperCase() : null,
         }))
       )
       .select('id, position')
@@ -835,7 +835,7 @@ export default function TripCreate() {
         selected.map((p) => ({
           trip_id: tripId,
           dni: p.dni,
-          full_name: p.full_name,
+          full_name: p.full_name.toUpperCase(),
           role_name: p.role_name,
           department: p.department,
           branch_id: p.branch_id,
@@ -844,7 +844,7 @@ export default function TripCreate() {
             passengerOrigins[p.dni] != null
               ? destIdByPos.get(passengerOrigins[p.dni]) ?? null
               : null,
-          observation: passengerObs[p.dni]?.trim() || null,
+          observation: passengerObs[p.dni]?.trim().toUpperCase() || null,
         }))
       )
       .select('id, dni')
@@ -858,7 +858,7 @@ export default function TripCreate() {
     // Actualizar el catálogo con las ubicaciones usadas
     // (cubre viajes antiguos creados antes del catálogo)
     const { error: catErr } = await supabase.from('locations').upsert(
-      destinations.map((d) => ({ name: d.name })),
+      destinations.map((d) => ({ name: d.name.toUpperCase() })),
       { onConflict: 'name', ignoreDuplicates: true }
     )
     if (catErr) console.warn('Catálogo no actualizado:', catErr.message)

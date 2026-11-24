@@ -146,7 +146,7 @@ export default function TripDetail() {
     const { error: incErr } = await supabase.from('trip_incidents').insert({
       trip_id: Number(id),
       trip_passenger_id: null,
-      message: `Viaje cancelado: ${cancelReason.trim()}`,
+      message: `Viaje cancelado: ${cancelReason.trim().toUpperCase()}`,
     })
 
     setCancelling(false)

@@ -295,7 +295,7 @@ export default function FuelPage() {
     if (!Number.isFinite(quantity) || quantity <= 0)
       return setError(`La cantidad en ${FUEL_UNIT[form.fuel_type]} debe ser mayor a 0`)
 
-    const station = form.station.trim()
+    const station = form.station.trim().toUpperCase()
     if (!station) return setError('La estación es obligatoria')
 
     const amountBs = Number(form.amount_bs.replace(',', '.'))
@@ -306,7 +306,7 @@ export default function FuelPage() {
     if (!Number.isFinite(rateValue) || rateValue <= 0)
       return setError('La tasa (Bs por 1 $) debe ser mayor a 0')
 
-    const ref = form.payment_ref.trim()
+    const ref = form.payment_ref.trim().toUpperCase()
     if (!ref) return setError(`${PAY_REF_LABEL[form.payment_method]} es obligatorio`)
 
     const when = new Date(`${form.date}T${form.time || '00:00'}`)
@@ -324,7 +324,7 @@ export default function FuelPage() {
       payment_ref: ref,
       rate_source: rateFromApi ? 'bcv' : 'manual',
       rate_date: rateFromApi ? rateApiDate : null,
-      notes: form.notes.trim() || null,
+      notes: form.notes.trim() ? form.notes.trim().toUpperCase() : null,
     }
 
     setSaving(true)

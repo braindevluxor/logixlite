@@ -58,6 +58,15 @@ code {
   font-size: 0.85em;
 }
 
+/* ===== Todo lo que el usuario escribe se muestra en MAYUSCULAS =====
+   Solo es visual: ademas cada formulario normaliza el valor al
+   guardar (los datos persistidos quedan en mayusculas).
+   Se excluyen email y contraseña (deben respetar su formato). */
+input:not([type='email']):not([type='password']):not([type='checkbox']):not([type='radio']),
+textarea {
+  text-transform: uppercase;
+}
+
 /* ===== Layout ===== */
 .app {
   display: flex;
@@ -2075,6 +2084,71 @@ code {
   color: #fff;
   font-size: 0.72rem;
   font-weight: 800;
+}
+
+/* ===== Busqueda de pasajeros en la nomina (API) ===== */
+.ft-hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+}
+
+.ft-results {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ft-result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.ft-result-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ft-result-text strong {
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft-result .btn {
+  flex-shrink: 0;
+}
+
+/* Separador: nomina (API) vs registro manual */
+.ft-or {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.85rem 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.ft-or::before,
+.ft-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 /* Resumen al finalizar el viaje libre */

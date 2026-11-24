@@ -108,7 +108,7 @@ export default function DriverTrip() {
     setCancelling(true)
     const { data: rpc, error: rpcErr } = await supabase.rpc('trip_share_cancel', {
       p_token: token,
-      p_reason: cancelReason.trim(),
+      p_reason: cancelReason.trim().toUpperCase(),
     })
     setCancelling(false)
     if (rpcErr) {
@@ -327,7 +327,7 @@ export default function DriverTrip() {
     const { data: rpc, error: rpcErr } = await supabase.rpc('trip_share_incident', {
       p_token: token,
       p_passenger_id: quickIncident.passengerId,
-      p_message: quickMsg.trim(),
+      p_message: quickMsg.trim().toUpperCase(),
     })
     setQuickBusy(false)
     if (rpcErr) {

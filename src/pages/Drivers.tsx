@@ -120,12 +120,12 @@ export default function Drivers() {
     setError(null)
     const base = {
       dni: (form.dni ?? '').trim(),
-      full_name: (form.full_name ?? '').trim(),
-      phone: form.phone?.trim() || null,
-      license_number: form.license_number?.trim() || null,
+      full_name: (form.full_name ?? '').trim().toUpperCase(),
+      phone: form.phone?.trim().toUpperCase() || null,
+      license_number: form.license_number?.trim().toUpperCase() || null,
       license_expires: form.license_expires || null,
       active: form.active ?? true,
-      notes: form.notes?.trim() || null,
+      notes: form.notes?.trim().toUpperCase() || null,
     }
     if (!base.dni) return setError('La cédula (DNI) es obligatoria')
     if (!base.full_name) return setError('El nombre es obligatorio')
@@ -269,7 +269,7 @@ export default function Drivers() {
       .filter((e) => checked.has(String(e.dni)) && !existing.has(String(e.dni)))
       .map((e) => ({
         dni: String(e.dni),
-        full_name: employeeFullName(e),
+        full_name: employeeFullName(e).toUpperCase(),
         active: e.active,
         notes: `Importado de API · ${e.role_name} · ${e.department_name}`,
       }))

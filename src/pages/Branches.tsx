@@ -45,7 +45,10 @@ export default function Branches() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    const payload = { name: name.trim(), external_id: Number(externalId) }
+    const payload = {
+      name: name.trim().toUpperCase(),
+      external_id: Number(externalId),
+    }
     if (!payload.name) return setError('El nombre es obligatorio')
     if (!payload.external_id || payload.external_id < 1)
       return setError('El ID de la API (branchID) es obligatorio')

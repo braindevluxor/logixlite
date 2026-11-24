@@ -177,12 +177,12 @@ export default function Vehicles() {
 
     const payload = {
       plate: (form.plate ?? '').trim().toUpperCase(),
-      brand: form.brand?.trim() || null,
-      model: form.model?.trim() || null,
+      brand: form.brand?.trim().toUpperCase() || null,
+      model: form.model?.trim().toUpperCase() || null,
       year: form.year ? Number(form.year) : null,
       capacity: Number(form.capacity),
       status: form.status ?? 'activo',
-      notes: form.notes?.trim() || null,
+      notes: form.notes?.trim().toUpperCase() || null,
       default_driver_id: form.default_driver_id ?? null,
       fuel_system: form.fuel_system ?? 'ambos',
     }
