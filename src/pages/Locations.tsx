@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ExternalLink, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, GitMerge, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import { checkPointValue } from '../components/RouteMap'
@@ -23,6 +23,12 @@ export default function Locations() {
   const [formName, setFormName] = useState('')
   const [formUrl, setFormUrl] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // ---- Unir dos ubicaciones en una ----
+  const [mergeTarget, setMergeTarget] = useState<CatalogLocation | null>(null)
+  const [mergeWith, setMergeWith] = useState('')
+  const [merging, setMerging] = useState(false)
+  const [mergeErr, setMergeErr] = useState<string | null>(null)
 
   // Buscador global (barra superior)
   const { query: search } = useSearch()
@@ -118,6 +124,66 @@ export default function Locations() {
     load()
   }
 
+  // ---- Unir dos ubicaciones (ej: "LUXOR ACACIAS" + "ACACIAS LUXOR") ----
+  function openMerge(l: CatalogLocation) {
+    setMergeTarget(l)
+    setMergeWith('')
+    setMergeErr(null)
+  }
+
+  function closeMerge() {
+    setMergeTarget(null)
+    setMergeWith('')
+    setMergeErr(null)
+    setMerging(false)
+  }
+
+  /**
+   * Une la ubicación elegida con otra: las paradas de los viajes
+   * que usen el nombre duplicado pasan al nombre canónico, se
+   * conserva el enlace de Google Maps y se elimina el duplicado.
+   */
+  async function confirmMerge() {
+    if (!mergeTarget || !mergeWith) return
+    const target = items.find((i) => String(i.id) === mergeWith)
+    if (!target) return
+
+    setMerging(true)
+    setMergeErr(null)
+    try {
+      // 1) Paradas de los viajes: al nombre canónico
+      const { error: upDest } = await supabase
+        .from('trip_destinations')
+        .update({ name: target.name })
+        .ilike('name', mergeTarget.name)
+      if (upDest) throw new Error(upDest.message)
+
+      // 2) Conservar el enlace del duplicado si el canónico no tiene
+      const dupUrl = (mergeTarget.maps_url ?? '').trim()
+      const targetUrl = (target.maps_url ?? '').trim()
+      if (dupUrl && !targetUrl) {
+        const { error: upUrl } = await supabase
+          .from('locations')
+          .update({ maps_url: dupUrl })
+          .eq('id', target.id)
+        if (upUrl) throw new Error(upUrl.message)
+      }
+
+      // 3) Eliminar el duplicado
+      const { error: delErr } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', mergeTarget.id)
+      if (delErr) throw new Error(delErr.message)
+
+      closeMerge()
+      load()
+    } catch (err) {
+      setMergeErr(err instanceof Error ? err.message : 'No se pudo unir')
+      setMerging(false)
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -176,7 +242,14 @@ export default function Locations() {
                     )}
                   </div>
                 </div>
-                <div className="row gap-sm">
+                <div className="row gap-sm wrap">
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => openMerge(l)}
+                    title="Unir esta ubicación con otra"
+                  >
+                    <GitMerge size={13} /> Unir
+                  </button>
                   <button className="btn btn-sm" onClick={() => openEdit(l)}>
                     <Pencil size={13} /> Editar
                   </button>
@@ -231,6 +304,71 @@ export default function Locations() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ---------- Modal: unir dos ubicaciones ---------- */}
+      {mergeTarget && (
+        <div className="modal-backdrop" onClick={closeMerge}>
+          <div
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Unir ubicaciones"
+          >
+            <h2>
+              <GitMerge size={18} /> Unir ubicaciones
+            </h2>
+            <p className="muted small">
+              Se unirá <strong>{up(mergeTarget.name)}</strong> con la que elijas: las
+              paradas de los viajes que usen ese nombre pasarán al nombre elegido y el
+              duplicado se eliminará. Si el duplicado tiene enlace de Google Maps y el
+              otro no, el enlace se conserva.
+            </p>
+
+            <label className="field">
+              <span>Unir con *</span>
+              <select value={mergeWith} onChange={(e) => setMergeWith(e.target.value)}>
+                <option value="">— Selecciona la ubicación correcta —</option>
+                {items
+                  .filter((i) => i.id !== mergeTarget.id)
+                  .map((i) => (
+                    <option key={i.id} value={String(i.id)}>
+                      {up(i.name)}
+                      {i.maps_url?.trim() ? '' : ' (sin enlace)'}
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            {items.filter((i) => i.id !== mergeTarget.id).length === 0 && (
+              <div className="alert alert-warn">
+                No hay otra ubicación con la que unir. Crea primero la correcta.
+              </div>
+            )}
+
+            {mergeErr && <div className="alert alert-error">{mergeErr}</div>}
+
+            <div className="row gap">
+              <button
+                type="button"
+                className="btn grow"
+                onClick={closeMerge}
+                disabled={merging}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary grow"
+                onClick={confirmMerge}
+                disabled={merging || !mergeWith}
+              >
+                {merging ? 'Uniendo…' : 'Unir'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
