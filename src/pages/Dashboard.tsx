@@ -7,12 +7,13 @@ import {
   ChevronUp,
   CircleCheck,
   Clock,
-  RotateCcw,
   Route,
   X,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { eachDay, localISO } from '../lib/dates'
+import { useDateFilter } from '../date/DateFilterContext'
 import type { TripStatus } from '../lib/types'
 
 interface TripRow {
@@ -82,39 +83,6 @@ function fmtHour(h: number): string {
   const ampm = h < 12 ? 'AM' : 'PM'
   const h12 = h % 12 === 0 ? 12 : h % 12
   return `${h12} ${ampm}`
-}
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function localISO(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-function startOfMonthISO(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`
-}
-
-function daysAgoISO(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return localISO(d)
-}
-
-/** Lista de fechas (YYYY-MM-DD) entre from y to, inclusive */
-function eachDay(from: string, to: string): string[] {
-  const out: string[] = []
-  const d = new Date(`${from}T00:00:00`)
-  const end = new Date(`${to}T00:00:00`)
-  let guard = 0
-  while (d <= end && guard < 400) {
-    out.push(localISO(d))
-    d.setDate(d.getDate() + 1)
-    guard++
-  }
-  return out
 }
 
 
@@ -363,8 +331,9 @@ function LineChart({
 }
 
 export default function Dashboard() {
-  const [from, setFrom] = useState(startOfMonthISO)
-  const [to, setTo] = useState(() => localISO(new Date()))
+  // Rango de fechas: el control vive en la barra superior
+  // (DateFilterProvider) y aqui solo se consume
+  const { from, to } = useDateFilter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trips, setTrips] = useState<TripRow[]>([])
@@ -718,72 +687,8 @@ export default function Dashboard() {
     setPendingLoading(false)
   }
 
-  // Rangos rápidos activos
-  const today = localISO(new Date())
-  const quickRanges = [
-    { label: 'Hoy', from: today, to: today },
-    { label: '7 días', from: daysAgoISO(6), to: today },
-    { label: 'Este mes', from: startOfMonthISO(), to: today },
-  ]
-  const activeQuick = quickRanges.find((r) => r.from === from && r.to === to)?.label ?? null
-
   return (
     <div className="page dash">
-      {/* ---- Filtro de fechas ---- */}
-      <div className="card date-filter">
-        <div className="date-quick">
-          <Calendar size={16} className="date-filter-icon" />
-          {quickRanges.map((r) => (
-            <button
-              key={r.label}
-              type="button"
-              className={`pill ${activeQuick === r.label ? 'active' : ''}`}
-              onClick={() => {
-                setFrom(r.from)
-                setTo(r.to)
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
-          {activeQuick && (
-            <button
-              type="button"
-              className="pill pill-reset"
-              onClick={() => {
-                setFrom(startOfMonthISO())
-                setTo(localISO(new Date()))
-              }}
-              title="Restablecer"
-            >
-              <RotateCcw size={13} />
-            </button>
-          )}
-        </div>
-
-        <div className="date-inputs">
-          <label className="field">
-            <span>Desde</span>
-            <input
-              type="date"
-              value={from}
-              max={to}
-              onChange={(e) => e.target.value && setFrom(e.target.value)}
-            />
-          </label>
-          <span className="date-sep">→</span>
-          <label className="field">
-            <span>Hasta</span>
-            <input
-              type="date"
-              value={to}
-              min={from}
-              onChange={(e) => e.target.value && setTo(e.target.value)}
-            />
-          </label>
-        </div>
-      </div>
-
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
