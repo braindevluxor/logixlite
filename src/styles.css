@@ -2605,6 +2605,26 @@ button.maps-link:hover {
   font-weight: 700;
 }
 
+/* Aviso: falta el enlace de Google Maps (obligatorio) */
+.pick-req {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--warn);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.65rem;
+}
+
+/* Marca las ubicaciones del catálogo que aún no tienen enlace */
+.loc-no-url {
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--warn);
+}
+
 .route-map .map-frame {
   margin-bottom: 0.6rem;
   background: var(--surface);

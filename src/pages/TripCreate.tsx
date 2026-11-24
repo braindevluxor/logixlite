@@ -110,6 +110,8 @@ export default function TripCreate() {
   const [pickBusy, setPickBusy] = useState(false)
   // Enlace de Google Maps de la ubicación que se crea o elige
   const [pickUrl, setPickUrl] = useState('')
+  // Error de validación visible DENTRO del selector
+  const [pickError, setPickError] = useState('')
   // Asignación pasajero (dni) → posiciones de destino [1, 2, 3...]
   const [passengerDests, setPassengerDests] = useState<Record<string, number[]>>({})
   // Origen de cada pasajero (dni) → una sola posición (1, 2, 3...)
@@ -501,9 +503,24 @@ export default function TripCreate() {
     [catalog, pickQuery]
   )
 
+  /**
+   * El enlace de Google Maps es obligatorio la PRIMERA vez que
+   * se usa una ubicacion: si el nombre aun no esta en el
+   * catalogo, o esta pero sin enlace, hay que pegarlo para que
+   * la ruta del mapa salga exacta.
+   */
+  const pickNeedsUrl = useMemo(() => {
+    const q = pickQuery.trim()
+    if (!q) return false
+    const match = catalog.find((l) => l.name.toLowerCase() === q.toLowerCase())
+    if (!match) return true
+    return !match.maps_url?.trim()
+  }, [catalog, pickQuery])
+
   function openPicker(mode: 'trip' | 'origin' | 'route', dni?: string) {
     setPickQuery('')
     setPickUrl('')
+    setPickError('')
     setPicker(mode === 'trip' ? { mode } : { mode, dni: dni! })
   }
 
@@ -518,16 +535,27 @@ export default function TripCreate() {
     const target = picker
     if (!target) return
 
+    // Obligatorio la PRIMERA vez que se usa una ubicacion:
+    // sin enlace de Google Maps la ruta sale mal geolocalizada
+    const existing = catalog.find((l) => l.name.toLowerCase() === name.toLowerCase())
+    const urlValue = pickUrl.trim()
+    if (!urlValue && !existing?.maps_url?.trim()) {
+      setPickError(
+        `Coloca el enlace de Google Maps de "${name}" antes de continuar: es obligatorio la primera vez que se crea una ubicación.`
+      )
+      return
+    }
+
     setPickBusy(true)
     setError(null)
+    setPickError('')
 
-    // Enlace de Google Maps opcional: se guarda en el catálogo y
-    // en la parada del viaje para que el mapa sea preciso
-    const mapsUrl = pickUrl.trim() || null
+    // Enlace de Google Maps: se guarda en el catálogo y en la
+    // parada del viaje para que el mapa sea preciso
+    const mapsUrl = urlValue || null
 
     let canonical = name
     let catalogUrl: string | null = null
-    const existing = catalog.find((l) => l.name.toLowerCase() === name.toLowerCase())
     if (existing) {
       canonical = existing.name
       catalogUrl = existing.maps_url ?? null
@@ -1884,7 +1912,10 @@ export default function TripCreate() {
               <input
                 autoFocus
                 value={pickQuery}
-                onChange={(e) => setPickQuery(e.target.value)}
+                onChange={(e) => {
+                  setPickQuery(e.target.value)
+                  setPickError('')
+                }}
                 placeholder="Escribe un nombre…"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -1896,11 +1927,14 @@ export default function TripCreate() {
             </label>
 
             <label className="field">
-              <span>Enlace de Google Maps (opcional)</span>
+              <span>Enlace de Google Maps {pickNeedsUrl ? '*' : '(opcional)'}</span>
               <input
                 type="url"
                 value={pickUrl}
-                onChange={(e) => setPickUrl(e.target.value)}
+                onChange={(e) => {
+                  setPickUrl(e.target.value)
+                  setPickError('')
+                }}
                 placeholder="https://www.google.com/maps/…"
                 inputMode="url"
                 autoCapitalize="none"
@@ -1910,16 +1944,25 @@ export default function TripCreate() {
               />
             </label>
             <p className="muted small" style={{ margin: '-0.4rem 0 0.6rem' }}>
-              Pega el enlace del lugar en Google Maps para que el mapa de la ruta use el
-              punto exacto en lugar de buscar el nombre.
+              Pega el enlace del lugar en Google Maps. Es obligatorio la primera vez que
+              se crea una ubicación: así la ruta sale exacta.
             </p>
+
+            {pickNeedsUrl && !pickUrl.trim() && (
+              <div className="pick-req">
+                Este nombre aún no tiene enlace: pega la URL de Google Maps para poder
+                continuar.
+              </div>
+            )}
+
+            {pickError && <div className="alert alert-error">{pickError}</div>}
 
             {pickQuery.trim() && !pickExactMatch && (
               <button
                 type="button"
                 className="btn btn-primary btn-block"
                 onClick={() => pickLocation(pickQuery)}
-                disabled={pickBusy}
+                disabled={pickBusy || (pickNeedsUrl && !pickUrl.trim())}
               >
                 {pickBusy
                   ? 'Guardando…'
@@ -1945,6 +1988,9 @@ export default function TripCreate() {
                     >
                       <MapPin size={14} />
                       {up(l.name)}
+                      {!l.maps_url?.trim() && (
+                        <span className="loc-no-url">sin enlace</span>
+                      )}
                     </button>
                     <button
                       type="button"
