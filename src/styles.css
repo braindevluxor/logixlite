@@ -61,8 +61,9 @@ code {
 /* ===== Todo lo que el usuario escribe se muestra en MAYUSCULAS =====
    Solo es visual: ademas cada formulario normaliza el valor al
    guardar (los datos persistidos quedan en mayusculas).
-   Se excluyen email y contraseña (deben respetar su formato). */
-input:not([type='email']):not([type='password']):not([type='checkbox']):not([type='radio']),
+   Se excluyen email, contrasena y enlaces URL (deben conservar
+   su formato). */
+input:not([type='email']):not([type='password']):not([type='checkbox']):not([type='radio']):not([type='url']),
 textarea {
   text-transform: uppercase;
 }
@@ -2590,6 +2591,18 @@ button.maps-link:hover {
 
 .route-map-title svg {
   color: var(--primary);
+}
+
+/* Indicador de que la ruta usa el punto exacto del enlace */
+.route-map-flag {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: var(--ok);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .route-map .map-frame {

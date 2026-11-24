@@ -22,8 +22,10 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
      `trip_edit_cancel.sql`, `trip_dest_seq.sql`, `allow_trip_delete.sql`,
      `day_plan.sql`, `passenger_phone.sql`, `locations.sql`, `vehicle_photos.sql`,
      `driver_link.sql` (link público del chofer + viaje libre), `driver_photos.sql`,
-     `public_branches.sql` (nómina en el viaje libre) y `trip_rating.sql`
-     (calificación del viaje con link único por pasajero).
+     `public_branches.sql` (nómina en el viaje libre), `trip_rating.sql`
+     (calificación del viaje con link único por pasajero),
+     `trip_passenger_cancel.sql` (cancelar/sustituir pasajeros) y
+     `location_maps.sql` (enlace de Google Maps por ubicación).
 3. En **Authentication → Providers → Email**, desactiva "Confirm email" si quieres altas de usuario inmediatas.
 4. En **Authentication → Users → Add user**, crea tu usuario y contraseña.
 5. En **Project Settings → API**, copia la **Project URL** y la **anon key**.

@@ -108,6 +108,8 @@ export default function TripCreate() {
   >(null)
   const [pickQuery, setPickQuery] = useState('')
   const [pickBusy, setPickBusy] = useState(false)
+  // Enlace de Google Maps de la ubicación que se crea o elige
+  const [pickUrl, setPickUrl] = useState('')
   // Asignación pasajero (dni) → posiciones de destino [1, 2, 3...]
   const [passengerDests, setPassengerDests] = useState<Record<string, number[]>>({})
   // Origen de cada pasajero (dni) → una sola posición (1, 2, 3...)
@@ -501,6 +503,7 @@ export default function TripCreate() {
 
   function openPicker(mode: 'trip' | 'origin' | 'route', dni?: string) {
     setPickQuery('')
+    setPickUrl('')
     setPicker(mode === 'trip' ? { mode } : { mode, dni: dni! })
   }
 
@@ -518,14 +521,33 @@ export default function TripCreate() {
     setPickBusy(true)
     setError(null)
 
+    // Enlace de Google Maps opcional: se guarda en el catálogo y
+    // en la parada del viaje para que el mapa sea preciso
+    const mapsUrl = pickUrl.trim() || null
+
     let canonical = name
+    let catalogUrl: string | null = null
     const existing = catalog.find((l) => l.name.toLowerCase() === name.toLowerCase())
     if (existing) {
       canonical = existing.name
+      catalogUrl = existing.maps_url ?? null
+      // Si se colocó un enlace nuevo, actualiza el catálogo
+      if (mapsUrl && mapsUrl !== catalogUrl) {
+        const { error: upErr } = await supabase
+          .from('locations')
+          .update({ maps_url: mapsUrl })
+          .eq('id', existing.id)
+        if (!upErr) {
+          catalogUrl = mapsUrl
+          setCatalog((prev) =>
+            prev.map((l) => (l.id === existing.id ? { ...l, maps_url: mapsUrl } : l))
+          )
+        }
+      }
     } else {
       const { data, error } = await supabase
         .from('locations')
-        .insert({ name })
+        .insert({ name, maps_url: mapsUrl })
         .select('*')
         .single()
       if (error && error.code !== '23505') {
@@ -539,6 +561,7 @@ export default function TripCreate() {
           [...prev, loc].sort((a, b) => a.name.localeCompare(b.name, 'es'))
         )
         canonical = loc.name
+        catalogUrl = loc.maps_url ?? null
       } else {
         // Conflicto de unicidad: ya existía, tomar su nombre canónico
         const { data: ex } = await supabase
@@ -546,12 +569,19 @@ export default function TripCreate() {
           .select('*')
           .ilike('name', name)
           .maybeSingle()
-        if (ex) canonical = (ex as CatalogLocation).name
+        if (ex) {
+          canonical = (ex as CatalogLocation).name
+          catalogUrl = (ex as CatalogLocation).maps_url ?? null
+        }
       }
     }
 
+    // Enlace que usará la parada del viaje
+    const stopUrl = mapsUrl ?? catalogUrl
+
     setPicker(null)
     setPickQuery('')
+    setPickUrl('')
     setPickBusy(false)
 
     // Asegurar que la ubicación exista como parada de la ruta del viaje
@@ -566,8 +596,14 @@ export default function TripCreate() {
         position: pos,
         name: canonical,
         notes: null,
+        maps_url: stopUrl,
       }
       setDestinations((prev) => [...prev, newStop])
+    } else if (stopUrl) {
+      // La parada ya existía: adjuntar el enlace si se colocó uno
+      setDestinations((prev) =>
+        prev.map((d) => (d.position === pos ? { ...d, maps_url: stopUrl } : d))
+      )
     }
     const stopPos = pos
 
@@ -831,6 +867,7 @@ export default function TripCreate() {
           position: d.position,
           name: d.name.toUpperCase(),
           notes: d.notes ? d.notes.toUpperCase() : null,
+          maps_url: d.maps_url ?? null,
         }))
       )
       .select('id, position')
@@ -1620,6 +1657,8 @@ export default function TripCreate() {
             <RouteMap
               origin={destinations[0].name}
               destination={destinations[destinations.length - 1].name}
+              originUrl={destinations[0].maps_url}
+              destinationUrl={destinations[destinations.length - 1].maps_url}
             />
           )}
 
@@ -1855,6 +1894,25 @@ export default function TripCreate() {
                 }}
               />
             </label>
+
+            <label className="field">
+              <span>Enlace de Google Maps (opcional)</span>
+              <input
+                type="url"
+                value={pickUrl}
+                onChange={(e) => setPickUrl(e.target.value)}
+                placeholder="https://www.google.com/maps/…"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="Enlace de Google Maps de la ubicación"
+              />
+            </label>
+            <p className="muted small" style={{ margin: '-0.4rem 0 0.6rem' }}>
+              Pega el enlace del lugar en Google Maps para que el mapa de la ruta use el
+              punto exacto en lugar de buscar el nombre.
+            </p>
 
             {pickQuery.trim() && !pickExactMatch && (
               <button

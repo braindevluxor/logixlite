@@ -129,6 +129,8 @@ export interface TripDestination {
   position: number
   name: string
   notes: string | null
+  /** Enlace de Google Maps de la ubicación (opcional) */
+  maps_url?: string | null
 }
 
 /** Asignación pasajero ↔ destino (muchos a muchos) */
@@ -157,6 +159,8 @@ export interface CatalogLocation {
   id: number
   name: string
   active: boolean
+  /** Enlace de Google Maps de la ubicación (opcional) */
+  maps_url?: string | null
 }
 
 /** Respuesta de trip_share_get (viaje completo por token) */

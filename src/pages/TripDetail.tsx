@@ -716,6 +716,8 @@ export default function TripDetail() {
         <RouteMap
           origin={destinations[0].name}
           destination={destinations[destinations.length - 1].name}
+          originUrl={destinations[0].maps_url}
+          destinationUrl={destinations[destinations.length - 1].maps_url}
         />
       )}
 
