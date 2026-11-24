@@ -32,12 +32,6 @@ const TOUR_STEPS: TourStep[] = [
     description:
       'Entra aquí para registrar a quienes llevas y cada parada del recorrido, sin necesidad de un viaje asignado.',
   },
-  {
-    target: '[data-tour="tutorial"]',
-    title: 'Botón Tutorial',
-    description:
-      'Este botón vuelve a abrir este tour en cualquier momento, también desde tus viajes pendientes, el viaje y el viaje libre.',
-  },
 ]
 
 /**
@@ -125,7 +119,6 @@ export default function DriverHome() {
         <button
           type="button"
           className="btn-tutorial"
-          data-tour="tutorial"
           onClick={() => setShowTut(true)}
         >
           <BookOpen size={14} /> Tutorial

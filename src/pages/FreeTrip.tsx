@@ -265,12 +265,6 @@ export default function FreeTrip() {
           description:
             'Toca este botón para comenzar el recorrido. No necesitas tener un viaje asignado.',
         },
-        {
-          target: '[data-tour="tutorial"]',
-          title: 'Botón Tutorial',
-          description:
-            'Este botón vuelve a abrir el tour con el paso a paso del sistema.',
-        },
       ]
 
   return (
@@ -288,7 +282,6 @@ export default function FreeTrip() {
           <button
             type="button"
             className="btn-tutorial"
-            data-tour="tutorial"
             onClick={() => setShowTut(true)}
           >
             <BookOpen size={14} /> Tutorial

@@ -48,12 +48,6 @@ const TOUR_STEPS: TourStep[] = [
     description:
       'Regresa a la pantalla principal con tus dos opciones: viajes pendientes y viaje libre.',
   },
-  {
-    target: '[data-tour="tutorial"]',
-    title: 'Botón Tutorial',
-    description:
-      'Este botón vuelve a abrir el tour con el paso a paso del sistema en cualquier momento.',
-  },
 ]
 
 /**
@@ -134,7 +128,6 @@ export default function DriverTrips() {
           <button
             type="button"
             className="btn-tutorial"
-            data-tour="tutorial"
             onClick={() => setShowTut(true)}
           >
             <BookOpen size={14} /> Tutorial
