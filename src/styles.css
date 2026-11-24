@@ -440,6 +440,26 @@ code {
   .content {
     padding-bottom: 2rem;
   }
+
+  /* Dashboard: aprovecha el ancho de la pantalla en escritorio */
+  .content-wide {
+    max-width: 1500px;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  /* Con mas ancho caben las 3 tarjetas de grafico en fila */
+  .content-wide .charts-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
+  }
+
+  .content-wide .donut-wrap {
+    width: 180px;
+  }
+
+  .content-wide .chart-legend {
+    min-width: 170px;
+  }
 }
 
 .page {
@@ -2377,12 +2397,13 @@ code {
   display: flex;
   align-items: flex-end;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .date-inputs .field {
   margin-bottom: 0;
   flex: 1;
-  min-width: 140px;
+  min-width: 120px;
 }
 
 .date-sep {
@@ -2555,6 +2576,74 @@ code {
   flex-shrink: 0;
   min-width: 30px;
   text-align: center;
+}
+
+/* ===== Leyenda: fila "Ver mas" (maximo 5 filas visibles) ===== */
+.legend-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.4rem;
+  margin-top: 0.15rem;
+  cursor: pointer;
+  background: var(--surface);
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.legend-more:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+/* ===== Grafico: horas con mas viajes ===== */
+.hour-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.hour-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.hour-label {
+  width: 58px;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.hour-track {
+  width: auto;
+  flex: 1;
+  height: 10px;
+}
+
+.hour-count {
+  min-width: 30px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.76rem;
+  flex-shrink: 0;
 }
 
 /* ===== Vehículos: grid de tarjetas con foto ===== */
@@ -3439,10 +3528,10 @@ code {
   outline-offset: 1px;
 }
 
-/* ===== Fila de graficos (2 columnas en escritorio) ===== */
+/* ===== Fila de graficos (columnas segun el ancho disponible) ===== */
 .charts-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   gap: 1rem;
   align-items: start;
 }

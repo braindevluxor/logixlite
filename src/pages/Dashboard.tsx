@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   CircleCheck,
   Clock,
   RotateCcw,
@@ -64,6 +66,23 @@ const COLORS = [
   '#ea580c',
   '#4f46e5',
 ]
+
+/** Filas maximas visibles de las leyendas antes del "Ver mas" */
+const LEGEND_MAX = 5
+
+const STATUS_LABEL: Record<TripStatus, string> = {
+  programado: 'Programado',
+  en_curso: 'En curso',
+  finalizado: 'Finalizado',
+  cancelado: 'Cancelado',
+}
+
+/** "6 AM" / "11 PM" a partir de una hora (0-23) */
+function fmtHour(h: number): string {
+  const ampm = h < 12 ? 'AM' : 'PM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12} ${ampm}`
+}
 
 function pad(n: number): string {
   return String(n).padStart(2, '0')
@@ -334,6 +353,38 @@ export default function Dashboard() {
   const [deptModal, setDeptModal] = useState<string | null>(null)
   // ---- Detalle al clickear una parada/destino del segundo grafico ----
   const [stopModal, setStopModal] = useState<string | null>(null)
+  // ---- Leyendas: maximo 5 filas visibles y despues "Ver mas" ----
+  const [deptAll, setDeptAll] = useState(false)
+  const [stopAll, setStopAll] = useState(false)
+  const [hourAll, setHourAll] = useState(false)
+  // ---- Detalle al clickear una hora del grafico de horas ----
+  const [hourModal, setHourModal] = useState<number | null>(null)
+
+  /**
+   * Hora del dia con mas viajes de salida (0-23), ordenada de
+   * mayor a menor cantidad de viajes en el rango seleccionado.
+   */
+  const hourStats = useMemo(() => {
+    const byHour = new Map<number, number>()
+    for (const t of trips) {
+      const h = new Date(t.departure_at).getHours()
+      byHour.set(h, (byHour.get(h) ?? 0) + 1)
+    }
+    return [...byHour.entries()]
+      .map(([hour, count]) => ({ hour, count }))
+      .sort((a, b) => b.count - a.count || a.hour - b.hour)
+  }, [trips])
+
+  /** mayor cantidad de viajes en una hora (para escalar las barras) */
+  const hourMax = hourStats.reduce((m, h) => Math.max(m, h.count), 0)
+
+  /** Viajes de la hora clickeada (para el modal) */
+  const hourTrips = useMemo(() => {
+    if (hourModal == null) return []
+    return trips
+      .filter((t) => new Date(t.departure_at).getHours() === hourModal)
+      .sort((a, b) => a.departure_at.localeCompare(b.departure_at))
+  }, [hourModal, trips])
 
   /** Pasajeros del departamento elegido: nombre, destino, hora y fecha */
   const deptRows = useMemo(() => {
@@ -640,7 +691,7 @@ export default function Dashboard() {
                   onSelect={setDeptModal}
                 />
                 <ul className="chart-legend">
-                  {topDepts.map((d) => {
+                  {(deptAll ? topDepts : topDepts.slice(0, LEGEND_MAX)).map((d) => {
                     const p = Math.round((d.count / totalTraslados) * 100)
                     return (
                       <li
@@ -662,6 +713,31 @@ export default function Dashboard() {
                       </li>
                     )
                   })}
+                  {topDepts.length > LEGEND_MAX && (
+                    <li
+                      className="legend-more"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDeptAll((v) => !v)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setDeptAll((v) => !v)
+                        }
+                      }}
+                    >
+                      {deptAll ? (
+                        <>
+                          <ChevronUp size={13} /> Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={13} /> Ver más (
+                          {topDepts.length - LEGEND_MAX} más)
+                        </>
+                      )}
+                    </li>
+                  )}
                 </ul>
               </div>
             )}
@@ -698,7 +774,7 @@ export default function Dashboard() {
                   onSelect={setStopModal}
                 />
                 <ul className="chart-legend">
-                  {stopDonut.map((d) => (
+                  {(stopAll ? stopDonut : stopDonut.slice(0, LEGEND_MAX)).map((d) => (
                     <li
                       key={d.name}
                       className="legend-clickable"
@@ -710,8 +786,114 @@ export default function Dashboard() {
                       <strong className="legend-count">{d.count} viajes</strong>
                     </li>
                   ))}
+                  {stopDonut.length > LEGEND_MAX && (
+                    <li
+                      className="legend-more"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setStopAll((v) => !v)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setStopAll((v) => !v)
+                        }
+                      }}
+                    >
+                      {stopAll ? (
+                        <>
+                          <ChevronUp size={13} /> Ver menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={13} /> Ver más (
+                          {stopDonut.length - LEGEND_MAX} más)
+                        </>
+                      )}
+                    </li>
+                  )}
                 </ul>
               </div>
+            )}
+          </div>
+
+          {/* ---- Gráfico: horas con más viajes ---- */}
+          <div className="card chart-card">
+            <div className="chart-head">
+              <div>
+                <h2 className="chart-title">Horas con más viajes</h2>
+                <p className="chart-sub">
+                  {trips.length} viaje(s) · hora pico:{' '}
+                  {hourStats.length > 0
+                    ? `${fmtHour(hourStats[0].hour)} con ${hourStats[0].count}`
+                    : '—'}
+                </p>
+              </div>
+              <span className="chart-badge">
+                <ArrowRight size={13} /> {from} → {to}
+              </span>
+            </div>
+
+            {trips.length === 0 ? (
+              <div className="chart-empty">
+                <Clock size={28} />
+                <p>No hay viajes en el rango de fechas seleccionado.</p>
+              </div>
+            ) : (
+              <ul className="hour-list">
+                {(hourAll ? hourStats : hourStats.slice(0, LEGEND_MAX)).map((h) => {
+                  const p = hourMax > 0 ? Math.round((h.count / hourMax) * 100) : 0
+                  return (
+                    <li
+                      key={h.hour}
+                      className="hour-row legend-clickable"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setHourModal(h.hour)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setHourModal(h.hour)
+                        }
+                      }}
+                      title="Ver los viajes de esta hora"
+                    >
+                      <span className="hour-label">{fmtHour(h.hour)}</span>
+                      <span className="legend-track hour-track">
+                        <span
+                          className="legend-fill"
+                          style={{ width: `${p}%`, background: '#2563eb' }}
+                        />
+                      </span>
+                      <strong className="hour-count">{h.count}</strong>
+                    </li>
+                  )
+                })}
+                {hourStats.length > LEGEND_MAX && (
+                  <li
+                    className="legend-more"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setHourAll((v) => !v)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setHourAll((v) => !v)
+                      }
+                    }}
+                  >
+                    {hourAll ? (
+                      <>
+                        <ChevronUp size={13} /> Ver menos
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={13} /> Ver más (
+                        {hourStats.length - LEGEND_MAX} más)
+                      </>
+                    )}
+                  </li>
+                )}
+              </ul>
             )}
           </div>
           </div>
@@ -816,6 +998,71 @@ export default function Dashboard() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: viajes de una hora ===== */}
+      {hourModal !== null && (
+        <div className="modal-backdrop" onClick={() => setHourModal(null)}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Viajes por hora"
+          >
+            <div className="modal-head">
+              <div>
+                <h2>
+                  <Clock size={18} /> Viajes a las {fmtHour(hourModal)}
+                </h2>
+                <p className="muted small">
+                  {hourTrips.length} viaje(s) · {from} → {to}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setHourModal(null)}
+                aria-label="Cerrar"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {hourTrips.length === 0 ? (
+              <div className="chart-empty">
+                <Clock size={28} />
+                <p>Sin viajes en esta hora del rango seleccionado.</p>
+              </div>
+            ) : (
+              <div className="pending-list">
+                {hourTrips.map((t) => (
+                  <Link
+                    key={t.id}
+                    to={`/viajes/${t.id}`}
+                    className="pending-row"
+                    onClick={() => setHourModal(null)}
+                  >
+                    <div className="pending-main">
+                      <strong>{fmtTime12(t.departure_at)}</strong>
+                      <span className="muted small">
+                        {new Date(t.departure_at).toLocaleDateString('es-VE', {
+                          dateStyle: 'medium',
+                        })}
+                      </span>
+                    </div>
+                    <div className="pending-side">
+                      <span className={`badge badge-${t.status}`}>
+                        {STATUS_LABEL[t.status]}
+                      </span>
+                      <ArrowRight size={16} className="pending-arrow" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

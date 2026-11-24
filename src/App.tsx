@@ -158,7 +158,10 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="content">{children}</main>
+      {/* En el dashboard el contenido aprovecha el ancho (escritorio) */}
+      <main className={`content${location.pathname === '/' ? ' content-wide' : ''}`}>
+        {children}
+      </main>
 
       {/* Barra inferior: visible solo en movil */}
       <nav className="bottomnav">{navLinks}</nav>
