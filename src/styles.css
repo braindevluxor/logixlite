@@ -61,9 +61,9 @@ code {
 /* ===== Todo lo que el usuario escribe se muestra en MAYUSCULAS =====
    Solo es visual: ademas cada formulario normaliza el valor al
    guardar (los datos persistidos quedan en mayusculas).
-   Se excluyen email, contrasena y enlaces URL (deben conservar
-   su formato). */
-input:not([type='email']):not([type='password']):not([type='checkbox']):not([type='radio']):not([type='url']),
+   Se excluyen email, contrasena y los campos de enlaces
+   (.input-url) que deben conservar su formato. */
+input:not([type='email']):not([type='password']):not([type='checkbox']):not([type='radio']):not([type='url']):not(.input-url),
 textarea {
   text-transform: uppercase;
 }

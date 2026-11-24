@@ -3,6 +3,10 @@ import { up } from '../lib/format'
 
 type MapPointInfo = { lat: number; lon: number } | { place: string }
 
+const NUM = String.raw`-?\d+(?:\.\d+)?`
+/** Coordenadas sueltas: "10.22239189, -67.55684945" */
+const COORD_RE = new RegExp(`^\\s*(${NUM})\\s*,\\s*(${NUM})\\s*$`)
+
 /** decodeURIComponent que nunca lanza */
 function safeDecode(s: string): string {
   try {
@@ -13,16 +17,50 @@ function safeDecode(s: string): string {
 }
 
 /**
+ * Valida el campo de enlace/coordenadas de una ubicación.
+ * Devuelve null si está vacío o es válido, o el mensaje de error.
+ * Acepta una URL de Google Maps o coordenadas "lat, lon".
+ */
+export function checkPointValue(value: string): string | null {
+  const s = value.trim()
+  if (!s) return null
+
+  const c = s.match(COORD_RE)
+  if (c) {
+    const lat = parseFloat(c[1])
+    const lon = parseFloat(c[2])
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      return 'Coordenadas fuera de rango. Usa latitud, longitud (ej: 10.22239189, -67.55684945).'
+    }
+    return null
+  }
+
+  if (/^https?:\/\//i.test(s) || s.includes('google.') || s.includes('goo.gl')) {
+    return null
+  }
+  return 'Pega una URL de Google Maps o coordenadas como 10.22239189, -67.55684945.'
+}
+
+/**
  * Extrae coordenadas o el nombre del lugar de un enlace de
- * Google Maps (formatos: ?q=10.1,-68.1 / @lat,lon,z /
- * !3d..!4d / ?origin=lat,lon / /place/<nombre>).
+ * Google Maps (formatos: coordenadas sueltas, ?q=10.1,-68.1,
+ * @lat,lon,z, !3d..!4d, ?origin=lat,lon, /place/<nombre>).
  * Los enlaces cortos (maps.app.goo.gl) no traen coordenadas
  * y se devuelven null para que se use el nombre escrito.
  */
 function parseMapsUrl(url: string): MapPointInfo | null {
   const u = url.trim()
   if (!u) return null
-  const n = String.raw`-?\d+(?:\.\d+)?`
+  const n = NUM
+
+  // Coordenadas sueltas: "10.2224, -67.5568"
+  const bare = u.match(COORD_RE)
+  if (bare) {
+    const lat = parseFloat(bare[1])
+    const lon = parseFloat(bare[2])
+    if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon }
+    return null
+  }
 
   const at = u.match(new RegExp(`@(${n}),(${n})`))
   if (at) {

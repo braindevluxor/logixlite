@@ -15,7 +15,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { up } from '../lib/format'
-import RouteMap from '../components/RouteMap'
+import RouteMap, { checkPointValue } from '../components/RouteMap'
 import type {
   ApiEmployee,
   Branch,
@@ -541,8 +541,13 @@ export default function TripCreate() {
     const urlValue = pickUrl.trim()
     if (!urlValue && !existing?.maps_url?.trim()) {
       setPickError(
-        `Coloca el enlace de Google Maps de "${name}" antes de continuar: es obligatorio la primera vez que se crea una ubicación.`
+        `Coloca el enlace de Google Maps (o las coordenadas) de "${name}" antes de continuar: es obligatorio la primera vez que se crea una ubicación.`
       )
+      return
+    }
+    const urlErr = checkPointValue(urlValue)
+    if (urlErr) {
+      setPickError(urlErr)
       return
     }
 
@@ -1936,31 +1941,31 @@ export default function TripCreate() {
             </label>
 
             <label className="field">
-              <span>Enlace de Google Maps {pickNeedsUrl ? '*' : '(opcional)'}</span>
+              <span>Enlace de Google Maps o coordenadas {pickNeedsUrl ? '*' : '(opcional)'}</span>
               <input
-                type="url"
+                type="text"
+                className="input-url"
                 value={pickUrl}
                 onChange={(e) => {
                   setPickUrl(e.target.value)
                   setPickError('')
                 }}
-                placeholder="https://www.google.com/maps/…"
-                inputMode="url"
+                placeholder="https://www.google.com/maps/… o 10.22239189, -67.55684945"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-label="Enlace de Google Maps de la ubicación"
+                aria-label="Enlace de Google Maps o coordenadas de la ubicación"
               />
             </label>
             <p className="muted small" style={{ margin: '-0.4rem 0 0.6rem' }}>
-              Pega el enlace del lugar en Google Maps. Es obligatorio la primera vez que
-              se crea una ubicación: así la ruta sale exacta.
+              Pega la URL del lugar o sus coordenadas (lat, lon). Es obligatorio la primera
+              vez que se crea una ubicación: así la ruta sale exacta.
             </p>
 
             {pickNeedsUrl && !pickUrl.trim() && (
               <div className="pick-req">
-                Este nombre aún no tiene enlace: pega la URL de Google Maps para poder
-                continuar.
+                Este nombre aún no tiene enlace: pega la URL de Google Maps o sus
+                coordenadas para poder continuar.
               </div>
             )}
 

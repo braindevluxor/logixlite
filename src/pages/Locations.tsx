@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ExternalLink, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { checkPointValue } from '../components/RouteMap'
 import { useSearch } from '../search/SearchContext'
 import type { CatalogLocation } from '../lib/types'
 
@@ -79,8 +80,10 @@ export default function Locations() {
     // La URL es obligatoria la primera vez que se registra una
     // ubicacion (mismo criterio que el asistente de viajes)
     if (!url && !editing?.maps_url) {
-      return setError('Coloca el enlace de Google Maps de la ubicación')
+      return setError('Coloca el enlace de Google Maps o las coordenadas de la ubicación')
     }
+    const urlErr = checkPointValue(url)
+    if (urlErr) return setError(urlErr)
 
     setSaving(true)
     const payload: Record<string, unknown> = { name, maps_url: url || null }
@@ -210,14 +213,15 @@ export default function Locations() {
 
             <label className="field">
               <span>
-                Enlace de Google Maps {editing?.maps_url ? '(opcional)' : '*'}
+                Enlace de Google Maps o coordenadas{' '}
+                {editing?.maps_url ? '(opcional)' : '*'}
               </span>
               <input
-                type="url"
+                type="text"
+                className="input-url"
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
-                placeholder="https://www.google.com/maps/…"
-                inputMode="url"
+                placeholder="https://www.google.com/maps/… o 10.22239189, -67.55684945"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
