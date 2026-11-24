@@ -95,8 +95,11 @@ export default function TripDetail() {
   // ---- Mapa de la llegada (modal con iframe) ----
   const [mapPoint, setMapPoint] = useState<MapPoint | null>(null)
 
+  // Enlaces de Google Maps del catálogo (nombre en minúsculas -> URL)
+  const [locUrls, setLocUrls] = useState<Record<string, string>>({})
+
   const load = useCallback(async () => {
-    const [t, p, d, i] = await Promise.all([
+    const [t, p, d, i, locs] = await Promise.all([
       supabase
         .from('trips')
         .select(`*, branch:branches(*), vehicle:vehicles(*), driver:drivers(*)`)
@@ -117,6 +120,9 @@ export default function TripDetail() {
         .select('*')
         .eq('trip_id', id)
         .order('created_at', { ascending: false }),
+      // Catálogo: para que las paradas viejas (sin enlace en la
+      // parada) usen el enlace guardado en el catálogo
+      supabase.from('locations').select('name, maps_url'),
     ])
     if (t.error) return setError(t.error.message)
     if (!t.data) return setError('Viaje no encontrado')
@@ -126,6 +132,17 @@ export default function TripDetail() {
     setPassengers(passData)
     setDestinations(destData)
     setIncidents((i.data as IncidentRow[]) ?? [])
+
+    // Enlaces del catálogo por nombre (para paradas antiguas)
+    const urlByName: Record<string, string> = {}
+    for (const l of ((locs.data ?? []) as {
+      name: string
+      maps_url?: string | null
+    }[]) ?? []) {
+      const u = (l.maps_url ?? '').trim()
+      if (u) urlByName[l.name.toLowerCase()] = u
+    }
+    setLocUrls(urlByName)
 
     if (passData.length === 0) {
       setLinks([])
@@ -716,8 +733,16 @@ export default function TripDetail() {
         <RouteMap
           origin={destinations[0].name}
           destination={destinations[destinations.length - 1].name}
-          originUrl={destinations[0].maps_url}
-          destinationUrl={destinations[destinations.length - 1].maps_url}
+          originUrl={
+            destinations[0].maps_url ||
+            locUrls[destinations[0].name.toLowerCase()] ||
+            null
+          }
+          destinationUrl={
+            destinations[destinations.length - 1].maps_url ||
+            locUrls[destinations[destinations.length - 1].name.toLowerCase()] ||
+            null
+          }
         />
       )}
 

@@ -657,6 +657,15 @@ export default function TripCreate() {
     setCatalog((prev) => prev.filter((l) => l.id !== loc.id))
   }
 
+  /** Enlace de Google Maps de una parada: de la parada o del catálogo */
+  function stopMapsUrl(d: TripDestination): string | null {
+    return (
+      d.maps_url ||
+      catalog.find((l) => l.name.toLowerCase() === d.name.toLowerCase())?.maps_url ||
+      null
+    )
+  }
+
   function removeDestination(pos: number) {
     setDestinations((prev) => {
       const next = prev
@@ -1685,8 +1694,8 @@ export default function TripCreate() {
             <RouteMap
               origin={destinations[0].name}
               destination={destinations[destinations.length - 1].name}
-              originUrl={destinations[0].maps_url}
-              destinationUrl={destinations[destinations.length - 1].maps_url}
+              originUrl={stopMapsUrl(destinations[0])}
+              destinationUrl={stopMapsUrl(destinations[destinations.length - 1])}
             />
           )}
 
