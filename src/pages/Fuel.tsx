@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Fuel as FuelIcon, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Fuel as FuelIcon, Banknote, CreditCard, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { fetchBcvRate } from '../lib/bcv'
 import { useSearch } from '../search/SearchContext'
@@ -177,6 +177,20 @@ export default function FuelPage() {
   )
 
   const hasFilters = vehicleFilter !== 'all' || typeFilter !== 'todos' || !!from || !!to
+
+  /** Gasto del filtro separado por forma de pago */
+  const payTotals = useMemo(() => {
+    const make = () => ({ bs: 0, usd: 0, count: 0 })
+    const efectivo = make()
+    const electronico = make()
+    for (const r of filtered) {
+      const m = r.payment_method === 'efectivo' ? efectivo : electronico
+      m.bs += Number(r.amount_bs) || 0
+      m.usd += Number(r.amount_usd) || 0
+      m.count += 1
+    }
+    return { efectivo, electronico }
+  }, [filtered])
 
   function clearFilters() {
     setVehicleFilter('all')
@@ -420,6 +434,35 @@ export default function FuelPage() {
               <span className="stat-num">{fmtQty(totals.vol)}</span>
               <span className="stat-label">GNV (Vol)</span>
               <span className="muted small">suma de volumen cargado</span>
+            </div>
+          </div>
+
+          {/* ---- Efectivo vs electrónico (mismo desglose del dashboard) ---- */}
+          <div className="card stat-card stat-pay">
+            <span className="stat-icon stat-icon-ok">
+              <Banknote size={20} />
+            </span>
+            <div className="stat-body">
+              <span className="stat-num">Bs {fmtBs(payTotals.efectivo.bs)}</span>
+              <span className="stat-label">Efectivo</span>
+              <span className="muted small">
+                $ {fmtUsd(payTotals.efectivo.usd)} · {payTotals.efectivo.count}{' '}
+                {payTotals.efectivo.count === 1 ? 'carga' : 'cargas'}
+              </span>
+            </div>
+          </div>
+
+          <div className="card stat-card stat-pay">
+            <span className="stat-icon stat-icon-total">
+              <CreditCard size={20} />
+            </span>
+            <div className="stat-body">
+              <span className="stat-num">Bs {fmtBs(payTotals.electronico.bs)}</span>
+              <span className="stat-label">Electrónico</span>
+              <span className="muted small">
+                $ {fmtUsd(payTotals.electronico.usd)} · {payTotals.electronico.count}{' '}
+                {payTotals.electronico.count === 1 ? 'carga' : 'cargas'}
+              </span>
             </div>
           </div>
         </div>

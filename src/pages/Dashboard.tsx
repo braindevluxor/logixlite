@@ -210,11 +210,11 @@ function LineChart({
   }, [])
 
   const W = width
-  const H = 240
+  const H = 150
   const PAD_L = 38
   const PAD_R = 16
-  const PAD_T = 22
-  const PAD_B = 34
+  const PAD_T = 16
+  const PAD_B = 28
 
   const max = Math.max(1, ...data.map((d) => d.count))
   const innerW = W - PAD_L - PAD_R

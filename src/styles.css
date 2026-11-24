@@ -706,6 +706,11 @@ textarea {
   color: var(--warn);
 }
 
+/* Montos más compactos en las tarjetas de forma de pago */
+.stat-pay .stat-num {
+  font-size: 1.3rem;
+}
+
 .fuel-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
