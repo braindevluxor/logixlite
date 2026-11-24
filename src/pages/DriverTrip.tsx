@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Ban,
+  BookOpen,
   Check,
   CircleCheck,
   Flag,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import DriverTutorial from '../components/DriverTutorial'
 import type {
   SharedTrip,
   TripPassengerDestination,
@@ -54,6 +56,8 @@ export default function DriverTrip() {
   const [data, setData] = useState<SharedTrip | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // Tutorial paso a paso (boton de la barra superior)
+  const [showTut, setShowTut] = useState(false)
   const [busy, setBusy] = useState<number | null>(null)
   const [toast, setToast] = useState<{ msg: string; icon: 'check' | 'flag' | null } | null>(
     null
@@ -394,6 +398,13 @@ export default function DriverTrip() {
           LOGIXLITE
         </span>
         <span className={`badge badge-${trip.status}`}>{STATUS_LABEL[trip.status]}</span>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setShowTut(true)}
+        >
+          <BookOpen size={15} /> Tutorial
+        </button>
       </header>
 
       <main className="driver-main">
@@ -803,6 +814,9 @@ export default function DriverTrip() {
           {toast.msg}
         </div>
       )}
+
+      {/* Tutorial paso a paso */}
+      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
     </div>
   )
 }

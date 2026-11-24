@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  BookOpen,
   CalendarClock,
   ChevronRight,
   CircleCheck,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
+import DriverTutorial from '../components/DriverTutorial'
 import type { DriverLinkData, TripStatus } from '../lib/types'
 
 const STATUS_LABEL: Record<TripStatus, string> = {
@@ -39,6 +41,8 @@ export default function DriverHome() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'menu' | 'pending'>('menu')
+  // Tutorial paso a paso (boton de la barra superior)
+  const [showTut, setShowTut] = useState(false)
 
   const load = useCallback(async () => {
     if (!token) {
@@ -108,6 +112,13 @@ export default function DriverHome() {
           />
           LOGIXLITE
         </span>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => setShowTut(true)}
+        >
+          <BookOpen size={15} /> Tutorial
+        </button>
       </header>
 
       <main className="driver-main">
@@ -243,6 +254,9 @@ export default function DriverHome() {
           </section>
         )}
       </main>
+
+      {/* Tutorial paso a paso */}
+      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
     </div>
   )
 }

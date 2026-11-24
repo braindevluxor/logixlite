@@ -2943,6 +2943,102 @@ code {
   margin: 0.25rem 0 0;
 }
 
+/* ===== Tutorial paso a paso (vista del chofer) ===== */
+.tut-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.tut-step {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.tut-num {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.tut-step-body {
+  min-width: 0;
+}
+
+.tut-step-body h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.97rem;
+}
+
+.tut-step-body p {
+  margin: 0 0 0.45rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.tut-step-body p:last-child {
+  margin-bottom: 0;
+}
+
+.tut-list {
+  margin: 0 0 0.45rem;
+  padding-left: 1.15rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.tut-list li {
+  margin-bottom: 0.25rem;
+}
+
+.tut-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Texto fuerte dentro de la guia */
+.tut-step-body strong,
+.tut-list strong {
+  color: var(--text);
+}
+
+/* Elementos resaltados: botones y campos de la app */
+.tut-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.5rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tut-field {
+  display: inline-flex;
+  padding: 0.08rem 0.5rem;
+  border: 1px dashed var(--primary);
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--primary-dark);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .pending-list {
   display: flex;
   flex-direction: column;

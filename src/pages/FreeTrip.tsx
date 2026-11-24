@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  BookOpen,
   Check,
   CircleCheck,
   MapPin,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
+import DriverTutorial from '../components/DriverTutorial'
 import type { DriverLinkData } from '../lib/types'
 
 function fmtDateTime(iso: string): string {
@@ -39,6 +41,8 @@ export default function FreeTrip() {
   const [data, setData] = useState<DriverLinkData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // Tutorial paso a paso (boton de la barra superior)
+  const [showTut, setShowTut] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const firstLoad = useRef(true)
 
@@ -225,9 +229,18 @@ export default function FreeTrip() {
           />
           LOGIXLITE
         </span>
-        <Link className="btn btn-primary" to={`/chofer/${token}`}>
-          <ArrowLeft size={15} /> Menú
-        </Link>
+        <div className="row gap-sm">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => setShowTut(true)}
+          >
+            <BookOpen size={15} /> Tutorial
+          </button>
+          <Link className="btn btn-primary" to={`/chofer/${token}`}>
+            <ArrowLeft size={15} /> Menú
+          </Link>
+        </div>
       </header>
 
       <main className="driver-main">
@@ -467,6 +480,9 @@ export default function FreeTrip() {
           </>
         )}
       </main>
+
+      {/* Tutorial paso a paso */}
+      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
 
       {toast && <div className="toast">{toast}</div>}
     </div>
