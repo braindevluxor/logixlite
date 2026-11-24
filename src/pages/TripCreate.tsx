@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { up } from '../lib/format'
+import RouteMap from '../components/RouteMap'
 import type {
   ApiEmployee,
   Branch,
@@ -1612,6 +1613,14 @@ export default function TripCreate() {
                 </li>
               ))}
             </ol>
+          )}
+
+          {/* Mapa de la ruta planificada (Google Maps embebido) */}
+          {destinations.length > 0 && (
+            <RouteMap
+              origin={destinations[0].name}
+              destination={destinations[destinations.length - 1].name}
+            />
           )}
 
           <div className="row gap">
