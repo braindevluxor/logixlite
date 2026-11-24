@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Map as MapIcon } from 'lucide-react'
+import { ChevronRight, Map as MapIcon } from 'lucide-react'
 import MapPicker from './MapPicker'
 
 /** Lee "lat, lon" del valor actual (para abrir el mapa en ese punto) */
@@ -12,11 +12,12 @@ function parseCoords(v: string): { lat: number; lon: number } | null {
   return { lat, lon }
 }
 
+type Mode = 'map' | 'coords' | 'url'
+
 /**
- * Campo de ubicación con 3 opciones:
- *   1) pegar el enlace de Google Maps
- *   2) escribir las coordenadas "lat, lon"
- *   3) buscar o marcar el punto en un mapa (modal con Leaflet)
+ * Campo de ubicación. Por DEFECTO el MAPA (modal con Leaflet
+ * para buscar o marcar el punto), con opción de escribir las
+ * coordenadas "lat, lon" o pegar el enlace de Google Maps.
  * El valor siempre termina como enlace o como "lat, lon", que
  * es lo que entienden el mapa de ruta y checkPointValue.
  */
@@ -27,7 +28,7 @@ export default function PointInput({
   value: string
   onChange: (v: string) => void
 }) {
-  const [mode, setMode] = useState<'url' | 'coords'>('url')
+  const [mode, setMode] = useState<Mode>('map')
   const [pickOpen, setPickOpen] = useState(false)
 
   return (
@@ -35,51 +36,72 @@ export default function PointInput({
       <div className="seg">
         <button
           type="button"
-          className={mode === 'url' ? 'active' : ''}
-          onClick={() => setMode('url')}
+          className={mode === 'map' ? 'active' : ''}
+          onClick={() => {
+            setMode('map')
+            setPickOpen(true)
+          }}
         >
-          1. Enlace
+          <MapIcon size={13} /> Mapa
         </button>
         <button
           type="button"
           className={mode === 'coords' ? 'active' : ''}
           onClick={() => setMode('coords')}
         >
-          2. Coordenadas
+          Coordenadas
         </button>
         <button
           type="button"
-          className="point-map-btn"
-          onClick={() => setPickOpen(true)}
+          className={mode === 'url' ? 'active' : ''}
+          onClick={() => setMode('url')}
         >
-          <MapIcon size={13} /> 3. Mapa
+          Enlace
         </button>
       </div>
 
-      <input
-        type="text"
-        className="input-url"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={
-          mode === 'url'
-            ? 'https://www.google.com/maps/…'
-            : '10.22239189, -67.55684945'
-        }
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck={false}
-        aria-label={
-          mode === 'url' ? 'Enlace de Google Maps' : 'Coordenadas de la ubicación'
-        }
-      />
+      {/* Mapa: opción por defecto */}
+      {mode === 'map' && (
+        <button
+          type="button"
+          className="map-cta"
+          onClick={() => setPickOpen(true)}
+        >
+          <MapIcon size={18} />
+          <span>
+            <strong>{value ? 'Punto marcado' : 'Buscar o marcar el punto'}</strong>
+            <small>{value || 'Toca para abrir el mapa'}</small>
+          </span>
+          <ChevronRight size={16} />
+        </button>
+      )}
+
+      {(mode === 'coords' || mode === 'url') && (
+        <input
+          type="text"
+          className="input-url"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={
+            mode === 'url'
+              ? 'https://www.google.com/maps/…'
+              : '10.22239189, -67.55684945'
+          }
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={
+            mode === 'url' ? 'Enlace de Google Maps' : 'Coordenadas de la ubicación'
+          }
+        />
+      )}
 
       <MapPicker
         open={pickOpen}
         initial={parseCoords(value)}
         onPick={(coords) => {
           onChange(coords)
-          setMode('coords')
+          setMode('map')
           setPickOpen(false)
         }}
         onClose={() => setPickOpen(false)}

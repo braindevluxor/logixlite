@@ -219,7 +219,7 @@ export default function Locations() {
             <p className="muted small" style={{ margin: '-0.4rem 0 0.7rem' }}>
               {editing?.maps_url
                 ? 'Déjalo vacío para conservar el enlace actual.'
-                : 'Obligatorio: elige el enlace, las coordenadas o búscala en el mapa.'}
+                : 'Obligatorio: márqualo en el mapa (por defecto), con coordenadas o con el enlace.'}
             </p>
 
             <div className="row gap">

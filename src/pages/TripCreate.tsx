@@ -1989,9 +1989,9 @@ export default function TripCreate() {
               />
             </div>
             <p className="muted small" style={{ margin: '-0.4rem 0 0.6rem' }}>
-              Elige cómo marcarla: 1) pega el enlace, 2) escribe las coordenadas (lat,
-              lon) o 3) búscala en el mapa. Obligatorio la primera vez que se crea una
-              ubicación.
+              Por defecto se marca en el mapa; también puedes escribir las coordenadas
+              (lat, lon) o pegar el enlace de Google Maps. Obligatorio la primera vez que
+              se crea una ubicación.
             </p>
 
             {pickNeedsUrl && !pickUrl.trim() && (
