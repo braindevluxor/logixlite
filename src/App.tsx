@@ -33,6 +33,7 @@ import TripCreate from './pages/TripCreate'
 import TripDetail from './pages/TripDetail'
 import DriverTrip from './pages/DriverTrip'
 import DriverHome from './pages/DriverHome'
+import DriverTrips from './pages/DriverTrips'
 import FreeTrip from './pages/FreeTrip'
 
 /**
@@ -173,6 +174,7 @@ export default function App() {
 
       {/* Menu publico del chofer: pendientes + viaje libre */}
       <Route path="/chofer/:token" element={<DriverHome />} />
+      <Route path="/chofer/:token/pendientes" element={<DriverTrips />} />
       <Route path="/chofer/:token/libre" element={<FreeTrip />} />
 
       <Route path="/login" element={<Login />} />

@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import {
-  ArrowLeft,
-  BookOpen,
-  CalendarClock,
-  ChevronRight,
-  CircleCheck,
-  MapPin,
-  Play,
-  Users,
-} from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { BookOpen, CalendarClock, ChevronRight, CircleCheck, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { initials, up } from '../lib/format'
+import { initials } from '../lib/format'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
-import type { DriverLinkData, TripStatus } from '../lib/types'
+import type { DriverLinkData } from '../lib/types'
 
 /** Pasos del tour interactivo del menu del chofer */
 const TOUR_STEPS: TourStep[] = [
@@ -33,7 +24,7 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="pending"]',
     title: 'Viajes pendientes',
     description:
-      'Toca esta tarjeta para ver tus viajes asignados: estado, fecha y hora, paradas, pasajeros, vehículo y sucursal.',
+      'Toca esta tarjeta para abrir la pantalla con tus viajes asignados: estado, fecha y hora, paradas, pasajeros, vehículo y sucursal.',
   },
   {
     target: '[data-tour="libre"]',
@@ -45,23 +36,9 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="tutorial"]',
     title: 'Botón Tutorial',
     description:
-      'Este botón vuelve a abrir este tour en cualquier momento, también desde el viaje y el viaje libre.',
+      'Este botón vuelve a abrir este tour en cualquier momento, también desde tus viajes pendientes, el viaje y el viaje libre.',
   },
 ]
-
-const STATUS_LABEL: Record<TripStatus, string> = {
-  programado: 'Programado',
-  en_curso: 'En curso',
-  finalizado: 'Finalizado',
-  cancelado: 'Cancelado',
-}
-
-function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('es-VE', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  })
-}
 
 /**
  * Menu publico del chofer (no requiere login):
@@ -74,8 +51,7 @@ export default function DriverHome() {
   const [data, setData] = useState<DriverLinkData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'menu' | 'pending'>('menu')
-  // Tutorial paso a paso (boton de la barra superior)
+  // Tutorial interactivo (boton de la barra superior)
   const [showTut, setShowTut] = useState(false)
 
   const load = useCallback(async () => {
@@ -195,7 +171,7 @@ export default function DriverHome() {
             type="button"
             className="menu-option"
             data-tour="pending"
-            onClick={() => setView('pending')}
+            onClick={() => navigate(`/chofer/${token}/pendientes`)}
           >
             <span className="mo-icon">
               <CalendarClock size={24} />
@@ -226,75 +202,6 @@ export default function DriverHome() {
             <ChevronRight className="mo-arrow" size={18} />
           </button>
         </div>
-
-        {/* Lista de viajes pendientes */}
-        {view === 'pending' && (
-          <section className="dm-section">
-            <div className="dm-section-head">
-              <h2>Viajes pendientes</h2>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => setView('menu')}
-              >
-                <ArrowLeft size={13} /> Volver
-              </button>
-            </div>
-
-            {trips.length === 0 ? (
-              <div className="dm-empty">
-                <CircleCheck size={30} />
-                <p>Sin viajes pendientes</p>
-                <span className="muted small">
-                  Cuando te asignen un viaje aparecerá aquí.
-                </span>
-              </div>
-            ) : (
-              <div className="dm-list">
-                {trips.map((t) => (
-                  <article key={t.id} className="driver-card trip-mini">
-                    <div className="tm-top">
-                      <span className={`badge badge-${t.status}`}>
-                        {STATUS_LABEL[t.status]}
-                      </span>
-                      <span className="tm-date">
-                        <CalendarClock size={13} />
-                        {fmtDateTime(t.departure_at)}
-                      </span>
-                    </div>
-
-                    <div className="tm-route">
-                      <MapPin size={14} />
-                      {t.destinations.length > 0
-                        ? t.destinations.map((n) => up(n)).join(' → ')
-                        : 'Sin paradas asignadas'}
-                    </div>
-
-                    <div className="tm-meta">
-                      <span>
-                        <Users size={13} /> {t.passengers} pasajero(s)
-                      </span>
-                      {t.vehicle && <span>{t.vehicle}</span>}
-                      {t.branch && <span>{up(t.branch)}</span>}
-                    </div>
-
-                    {t.notes && <div className="tm-notes">{t.notes}</div>}
-
-                    {t.share_token ? (
-                      <Link className="btn btn-primary btn-block" to={`/viaje/${t.share_token}`}>
-                        Abrir viaje <ChevronRight size={15} />
-                      </Link>
-                    ) : (
-                      <button type="button" className="btn btn-block" disabled>
-                        Este viaje no tiene link
-                      </button>
-                    )}
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
       </main>
 
       {/* Tutorial interactivo con resaltado */}
