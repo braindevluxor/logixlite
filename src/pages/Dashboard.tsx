@@ -27,6 +27,8 @@ interface PassRow {
   dni: string | number
   full_name: string
   department: string | null
+  /** 'activo' | 'cancelado' (los cancelados no cuentan) */
+  status?: string
 }
 
 /** Filas de trip_passenger_destinations con destino y viaje embebidos */
@@ -402,7 +404,9 @@ export default function Dashboard() {
           }
           return
         }
-        passData = (passRes.data as PassRow[]) ?? []
+        passData = ((passRes.data as PassRow[]) ?? []).filter(
+          (p) => p.status !== 'cancelado'
+        )
         // PostgREST devuelve objetos (many-to-one); el tipo inferido
         // por supabase-js declara arrays, por eso el doble cast
         stopLinks = (stopRes.data as unknown as DestLinkRow[]) ?? []
@@ -467,7 +471,10 @@ export default function Dashboard() {
    */
   const stopStats = useMemo(() => {
     const byName = new Map<string, Set<number>>()
+    // Los pasajeros cancelados no suman traslados ni paradas
+    const activeIds = new Set(passengers.map((p) => p.id))
     for (const r of linkRows) {
+      if (!activeIds.has(r.trip_passenger_id)) continue
       const name = r.trip_destination?.name?.trim()
       const tripId = r.trip_passengers?.trip_id
       if (!name || tripId == null) continue
@@ -483,7 +490,7 @@ export default function Dashboard() {
       .map(([name, trips]) => ({ name, count: trips.size }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'es'))
     return { uniqueCount, list }
-  }, [linkRows])
+  }, [linkRows, passengers])
 
   const stopDonut = useMemo(
     () => stopStats.list.map((d, i) => ({ ...d, color: COLORS[i % COLORS.length] })),
@@ -655,7 +662,7 @@ export default function Dashboard() {
     if (rows.length > 0) {
       const { data: passData, error: pErr } = await supabase
         .from('trip_passengers')
-        .select('trip_id, trip_passenger_destinations(arrived_at)')
+        .select('trip_id, status, trip_passenger_destinations(arrived_at)')
         .in(
           'trip_id',
           rows.map((t) => t.id)
@@ -669,8 +676,10 @@ export default function Dashboard() {
 
       for (const p of (passData ?? []) as {
         trip_id: number
+        status?: string
         trip_passenger_destinations: { arrived_at: string | null }[] | null
       }[]) {
+        if (p.status === 'cancelado') continue
         const links = p.trip_passenger_destinations ?? []
         const cur = progress.get(p.trip_id) ?? { done: 0, total: 0 }
         cur.total += links.length

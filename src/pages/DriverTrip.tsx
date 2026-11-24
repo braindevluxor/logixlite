@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
+import MapModal, { type MapPoint } from '../components/MapModal'
 import type {
   SharedTrip,
   TripPassengerDestination,
@@ -58,6 +59,8 @@ export default function DriverTrip() {
   const [loading, setLoading] = useState(true)
   // Tutorial paso a paso (boton de la barra superior)
   const [showTut, setShowTut] = useState(false)
+  // Mapa de la llegada (modal con iframe)
+  const [mapPoint, setMapPoint] = useState<MapPoint | null>(null)
   const [busy, setBusy] = useState<number | null>(null)
   const [toast, setToast] = useState<{ msg: string; icon: 'check' | 'flag' | null } | null>(
     null
@@ -597,9 +600,9 @@ export default function DriverTrip() {
               <ul className="list">
                 {items.map(({ link, passenger }) => {
                   const arrived = !!link.arrived_at
-                  const mapsUrl =
+                  const geo =
                     link.latitude != null && link.longitude != null
-                      ? `https://www.google.com/maps?q=${link.latitude},${link.longitude}`
+                      ? { lat: link.latitude, lon: link.longitude }
                       : null
                   const passIncidents = incidents.filter(
                     (inc) => inc.trip_passenger_id === passenger!.id
@@ -624,16 +627,22 @@ export default function DriverTrip() {
                               <MapPin size={13} /> Sube en: <strong>{up(originName)}</strong>
                             </div>
                           )}
-                          {arrived && mapsUrl && (
-                            <a
+                          {arrived && geo && (
+                            <button
+                              type="button"
                               className="muted small maps-link"
-                              href={mapsUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                              onClick={() => {
+                                setMapPoint({
+                                  lat: geo.lat,
+                                  lon: geo.lon,
+                                  title: up(dest.name),
+                                  subtitle: passenger!.full_name,
+                                })
+                              }}
                             >
                               <MapPin size={13} /> {Math.round(link.gps_accuracy ?? 0)} m de
                               precisión
-                            </a>
+                            </button>
                           )}
 
                           {/* Novedades de ESTE pasajero */}
@@ -875,6 +884,9 @@ export default function DriverTrip() {
 
       {/* Tutorial interactivo con resaltado */}
       <SpotlightTour open={showTut} steps={tourSteps} onClose={() => setShowTut(false)} />
+
+      {/* Mapa de la llegada (iframe, sin salir de la vista) */}
+      <MapModal point={mapPoint} onClose={() => setMapPoint(null)} />
     </div>
   )
 }

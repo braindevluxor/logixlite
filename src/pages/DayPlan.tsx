@@ -17,6 +17,8 @@ interface PlanPassenger {
   full_name: string
   department: string | null
   observation: string | null
+  /** 'activo' | 'cancelado' (los cancelados no viajan) */
+  status?: string
   trip_passenger_destinations: { trip_destination_id: number; seq: number | null }[]
 }
 
@@ -115,7 +117,7 @@ export default function DayPlan() {
           `id, status, departure_at, notes,
            driver:drivers(id, full_name),
            vehicle:vehicles(plate, brand, model, year, capacity),
-           trip_passengers(id, full_name, department, observation,
+           trip_passengers(id, full_name, department, observation, status,
              trip_passenger_destinations(trip_destination_id, seq)),
            trip_destinations(id, name)`
         )
@@ -125,7 +127,18 @@ export default function DayPlan() {
 
       if (cancelled) return
       if (err) setError(err.message)
-      else setTrips((data as unknown as PlanTrip[]) ?? [])
+      else {
+        // Los pasajeros cancelados no aparecen en el plan del día
+        const rows = (data as unknown as PlanTrip[]) ?? []
+        setTrips(
+          rows.map((t) => ({
+            ...t,
+            trip_passengers: (t.trip_passengers ?? []).filter(
+              (p) => p.status !== 'cancelado'
+            ),
+          }))
+        )
+      }
       if (!cancelled) setLoading(false)
     }
 

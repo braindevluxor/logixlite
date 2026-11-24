@@ -2522,6 +2522,46 @@ textarea {
   text-decoration: none;
 }
 
+/* Los enlaces de mapa ahora son botones que abren un modal */
+button.chip-maps,
+button.maps-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  line-height: inherit;
+}
+
+button.chip-maps:hover,
+button.maps-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* ===== Mapa embebido en modal (iframe de Google Maps) ===== */
+.map-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 58vh;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+  margin-bottom: 0.85rem;
+}
+
+.map-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 /* Número de orden de bajada en los chips */
 .seq-mini {
   display: inline-grid;
@@ -3836,6 +3876,33 @@ textarea {
   border: 1px solid #fde047;
   border-radius: 6px;
   padding: 0.2rem 0.5rem;
+  display: inline-block;
+}
+
+/* ===== Pasajero cancelado (detalle del viaje) ===== */
+.list-item.pass-cancelled {
+  background: #f8fafc;
+  border-color: #fecaca;
+}
+
+.list-item.pass-cancelled strong {
+  color: var(--muted);
+}
+
+.cancel-tag {
+  margin-left: 6px;
+}
+
+.cancel-note {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
   display: inline-block;
 }
 

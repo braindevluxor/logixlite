@@ -7,14 +7,18 @@ import {
   Link2,
   MapPin,
   Pencil,
+  Search,
   Send,
   Share2,
   Star,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import Stars from '../components/Stars'
+import MapModal, { type MapPoint } from '../components/MapModal'
 import type {
+  ApiEmployee,
   Branch,
   Driver,
   Trip,
@@ -65,6 +69,30 @@ export default function TripDetail() {
   const [incidents, setIncidents] = useState<IncidentRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // ---- Cancelar pasajero (con comentario) ----
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelPass, setCancelPass] = useState<TripPassenger | null>(null)
+  const [paxReason, setPaxReason] = useState('')
+  const [cancelErr, setCancelErr] = useState<string | null>(null)
+  const [cancelSaving, setCancelSaving] = useState(false)
+
+  // ---- Reemplazar pasajero (cancela + agrega el nuevo) ----
+  const [replaceOpen, setReplaceOpen] = useState(false)
+  const [repPass, setRepPass] = useState<TripPassenger | null>(null)
+  const [repReason, setRepReason] = useState('')
+  const [repQuery, setRepQuery] = useState('')
+  const [repEmployees, setRepEmployees] = useState<ApiEmployee[] | null>(null)
+  const [repLoading, setRepLoading] = useState(false)
+  const [repLoadErr, setRepLoadErr] = useState<string | null>(null)
+  const [repName, setRepName] = useState('')
+  const [repDni, setRepDni] = useState('')
+  const [repPhone, setRepPhone] = useState('')
+  const [repSaving, setRepSaving] = useState(false)
+  const [repErr, setRepErr] = useState<string | null>(null)
+
+  // ---- Mapa de la llegada (modal con iframe) ----
+  const [mapPoint, setMapPoint] = useState<MapPoint | null>(null)
 
   const load = useCallback(async () => {
     const [t, p, d, i] = await Promise.all([
@@ -282,6 +310,218 @@ export default function TripDetail() {
     ].join('\n')
   }
 
+  // ---- Pasajeros activos (los cancelados no viajan) ----
+  const activePassengers = passengers.filter((p) => p.status !== 'cancelado')
+  const cancelledCount = passengers.length - activePassengers.length
+
+  // ===== Cancelar pasajero =====
+  function openCancel(p: TripPassenger) {
+    setCancelPass(p)
+    setPaxReason('')
+    setCancelErr(null)
+    setCancelOpen(true)
+  }
+
+  function closeCancel() {
+    setCancelOpen(false)
+    setCancelPass(null)
+    setPaxReason('')
+    setCancelErr(null)
+  }
+
+  async function confirmCancelPassenger() {
+    if (!cancelPass) return
+    if (!paxReason.trim()) {
+      setCancelErr('El comentario es obligatorio.')
+      return
+    }
+    setCancelSaving(true)
+    setCancelErr(null)
+    const { error: cErr } = await supabase
+      .from('trip_passengers')
+      .update({
+        status: 'cancelado',
+        cancel_reason: paxReason.trim().toUpperCase(),
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('id', cancelPass.id)
+    setCancelSaving(false)
+    if (cErr) {
+      setCancelErr(cErr.message)
+      return
+    }
+    closeCancel()
+    load()
+  }
+
+  // ===== Reemplazar pasajero =====
+  function openReplace(p: TripPassenger) {
+    setRepPass(p)
+    setRepReason('')
+    setRepQuery('')
+    setRepName('')
+    setRepDni('')
+    setRepPhone('')
+    setRepErr(null)
+    setRepLoadErr(null)
+    setReplaceOpen(true)
+    void loadRepEmployees()
+  }
+
+  function closeReplace() {
+    setReplaceOpen(false)
+    setRepPass(null)
+    setRepSaving(false)
+    setRepErr(null)
+  }
+
+  /** Nómina de trabajadores de todas las sucursales (una sola vez) */
+  async function loadRepEmployees() {
+    if (repEmployees || repLoading) return
+    setRepLoading(true)
+    setRepLoadErr(null)
+    try {
+      const { data: br, error: brErr } = await supabase
+        .from('branches')
+        .select('external_id')
+        .eq('active', true)
+      if (brErr) throw new Error(brErr.message)
+      const ids = ((br ?? []) as { external_id: number }[]).map((b) => b.external_id)
+      if (ids.length === 0) throw new Error('No hay sucursales registradas')
+
+      const results = await Promise.allSettled(ids.map((i) => fetchEmployees(i)))
+      const ok = results.filter(
+        (r): r is PromiseFulfilledResult<ApiEmployee[]> => r.status === 'fulfilled'
+      )
+      if (ok.length === 0) throw new Error('La nómina no respondió en ninguna sucursal')
+
+      const seen = new Set<string>()
+      setRepEmployees(
+        ok.flatMap((r) => r.value).filter((e) => {
+          const dni = String(e.dni)
+          if (seen.has(dni)) return false
+          seen.add(dni)
+          return true
+        })
+      )
+    } catch (err) {
+      setRepLoadErr(err instanceof Error ? err.message : 'Error al consultar la nómina')
+    } finally {
+      setRepLoading(false)
+    }
+  }
+
+  /**
+   * Sustituye al pasajero: primero agrega el nuevo (con su mismo
+   * origen y paradas, y una nota que indica a quién reemplaza)
+   * y después cancela al actual con el comentario.
+   */
+  async function replacePassenger(newP: {
+    full_name: string
+    dni: string
+    phone?: string | null
+    role_name?: string | null
+    department?: string | null
+    branch_id?: number | null
+  }) {
+    if (!repPass) return
+    if (!repReason.trim()) {
+      setRepErr('El comentario de la cancelación es obligatorio.')
+      return
+    }
+    if (!newP.full_name.trim()) {
+      setRepErr('El nombre del reemplazo es obligatorio.')
+      return
+    }
+    if (passengers.some((p) => p.dni === newP.dni)) {
+      setRepErr('Esa cédula ya está registrada en este viaje.')
+      return
+    }
+
+    setRepSaving(true)
+    setRepErr(null)
+
+    // 1) Insertar el reemplazo
+    const { data: created, error: iErr } = await supabase
+      .from('trip_passengers')
+      .insert({
+        trip_id: Number(id),
+        dni: newP.dni,
+        full_name: newP.full_name.trim().toUpperCase(),
+        role_name: newP.role_name ?? null,
+        department: newP.department ?? null,
+        branch_id: newP.branch_id ?? null,
+        phone: newP.phone ?? null,
+        origin_destination_id: repPass.origin_destination_id ?? null,
+        observation: `REEMPLAZA A ${repPass.full_name}`.toUpperCase(),
+        status: 'activo',
+      })
+      .select('id')
+      .single()
+
+    if (iErr || !created) {
+      setRepSaving(false)
+      setRepErr(iErr?.message ?? 'No se pudo agregar al pasajero de reemplazo.')
+      return
+    }
+    const newId = (created as { id: number }).id
+
+    // 2) Copiar las paradas asignadas al pasajero original
+    const oldLinks = links.filter((l) => l.trip_passenger_id === repPass.id)
+    if (oldLinks.length > 0) {
+      const { error: lErr } = await supabase
+        .from('trip_passenger_destinations')
+        .insert(
+          oldLinks.map((l) => ({
+            trip_passenger_id: newId,
+            trip_destination_id: l.trip_destination_id,
+            seq: l.seq,
+          }))
+        )
+      if (lErr) console.warn('No se copiaron las paradas:', lErr.message)
+    }
+
+    // 3) Cancelar al pasajero original con el comentario
+    const { error: cErr } = await supabase
+      .from('trip_passengers')
+      .update({
+        status: 'cancelado',
+        cancel_reason: repReason.trim().toUpperCase(),
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('id', repPass.id)
+
+    setRepSaving(false)
+    if (cErr) {
+      setRepErr(
+        `Se agregó el reemplazo, pero no se pudo cancelar al original: ${cErr.message}`
+      )
+      closeReplace()
+      load()
+      return
+    }
+
+    closeReplace()
+    load()
+  }
+
+  // Resultados de la nómina según lo escrito (máximo 6)
+  const repResults = (() => {
+    const q = repQuery.trim().toLowerCase()
+    if (!q || !repEmployees) return []
+    const taken = new Set(passengers.map((p) => p.dni))
+    return repEmployees
+      .filter((e) => !taken.has(String(e.dni)))
+      .filter(
+        (e) =>
+          employeeFullName(e).toLowerCase().includes(q) ||
+          String(e.dni).includes(q) ||
+          (e.role_name ?? '').toLowerCase().includes(q) ||
+          (e.department_name ?? '').toLowerCase().includes(q)
+      )
+      .slice(0, 6)
+  })()
+
   return (
     <div className="page">
       <div className="page-head">
@@ -400,7 +640,7 @@ export default function TripDetail() {
       ) : (
         <ol className="dest-list">
           {destinations.map((d) => {
-            const inDest = passengers.filter((p) =>
+            const inDest = activePassengers.filter((p) =>
               links.some((l) => l.trip_passenger_id === p.id && l.trip_destination_id === d.id)
             )
             return (
@@ -425,8 +665,11 @@ export default function TripDetail() {
       )}
 
       <h2>
-        Pasajeros ({passengers.length}
+        Pasajeros ({activePassengers.length}
         {trip.vehicle ? ` / ${trip.vehicle.capacity}` : ''})
+        {cancelledCount > 0 && (
+          <span className="muted small"> · {cancelledCount} cancelado(s)</span>
+        )}
       </h2>
       {passengers.length === 0 ? (
         <p className="muted">Sin pasajeros registrados.</p>
@@ -443,16 +686,28 @@ export default function TripDetail() {
             const originName = p.origin_destination_id
               ? destinations.find((d) => d.id === p.origin_destination_id)?.name
               : null
+            const cancelled = p.status === 'cancelado'
+            const canManage = trip.status === 'programado' || trip.status === 'en_curso'
             return (
               <li key={p.id}>
-                <div className="list-item">
+                <div className={`list-item ${cancelled ? 'pass-cancelled' : ''}`}>
                   <div>
                     <strong>{p.full_name}</strong>
+                    {cancelled && (
+                      <span className="badge badge-cancelado cancel-tag">
+                        Cancelado
+                      </span>
+                    )}
                     <div className="muted small">
                       C.I. {p.dni}
                       {p.role_name ? ` · ${p.role_name}` : ''}
                     </div>
                     {p.department && <div className="muted small">{p.department}</div>}
+                    {cancelled && (
+                      <div className="cancel-note">
+                        Motivo: {p.cancel_reason || 'Sin comentario'}
+                      </div>
+                    )}
                     {p.observation && (
                       <div className="obs-note">Obs: {p.observation}</div>
                     )}
@@ -479,9 +734,9 @@ export default function TripDetail() {
                               destinations.find((d) => d.id === l.trip_destination_id)
                                 ?.name === n
                           )
-                          const mapsUrl =
+                          const geo =
                             link && link.latitude != null && link.longitude != null
-                              ? `https://www.google.com/maps?q=${link.latitude},${link.longitude}`
+                              ? { lat: link.latitude, lon: link.longitude }
                               : null
                           return (
                             <span key={i} className="chip on">
@@ -493,16 +748,22 @@ export default function TripDetail() {
                                   minute: '2-digit',
                                 })}`}
                               {link?.km != null && ` · ${link.km} KM`}
-                              {mapsUrl && (
-                                <a
-                                  href={mapsUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
+                              {geo && (
+                                <button
+                                  type="button"
                                   className="chip-maps"
                                   aria-label="Ver en mapa"
+                                  onClick={() => {
+                                    setMapPoint({
+                                      lat: geo.lat,
+                                      lon: geo.lon,
+                                      title: up(n),
+                                      subtitle: p.full_name,
+                                    })
+                                  }}
                                 >
                                   <MapPin size={13} />
-                                </a>
+                                </button>
                               )}
                             </span>
                           )
@@ -511,9 +772,9 @@ export default function TripDetail() {
                     </div>
                   </div>
 
-                  {(trip.status === 'programado' || trip.status === 'finalizado') && (
-                    <div className="row gap-sm">
-                      {trip.status === 'programado' && (
+                  {(canManage || (trip.status === 'finalizado' && !cancelled)) && (
+                    <div className="row gap-sm wrap">
+                      {trip.status === 'programado' && !cancelled && (
                         <a
                           className="btn btn-sm btn-whatsapp notify-btn"
                           href={waUrl(passengerMessage(p), p.phone)}
@@ -530,7 +791,7 @@ export default function TripDetail() {
                       )}
 
                       {/* Viaje finalizado: pedir la calificación (link unico) */}
-                      {trip.status === 'finalizado' && ratingUrl(p) && (
+                      {trip.status === 'finalizado' && !cancelled && ratingUrl(p) && (
                         <a
                           className="btn btn-sm btn-whatsapp notify-btn"
                           href={waUrl(ratingMessage(p), p.phone)}
@@ -544,6 +805,28 @@ export default function TripDetail() {
                         >
                           <Star size={14} /> Calificar
                         </a>
+                      )}
+
+                      {/* Cancelar (con comentario) / sustituir por otro */}
+                      {canManage && (
+                        <>
+                          {!cancelled && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() => openCancel(p)}
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={() => openReplace(p)}
+                          >
+                            {cancelled ? 'Reemplazar' : 'Sustituir'}
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
@@ -581,6 +864,215 @@ export default function TripDetail() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* ===== Modal: cancelar pasajero (comentario obligatorio) ===== */}
+      {cancelOpen && cancelPass && (
+        <div className="modal-backdrop" onClick={closeCancel}>
+          <div
+            className="card modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Cancelar pasajero"
+          >
+            <h2>Cancelar pasajero</h2>
+            <p className="muted small">
+              <strong>{cancelPass.full_name}</strong> dejará de contar para este viaje
+              (puedes sustituirlo por otra persona).
+            </p>
+
+            <label className="field">
+              <span>Comentario / motivo *</span>
+              <textarea
+                rows={3}
+                value={paxReason}
+                onChange={(e) => setPaxReason(e.target.value)}
+                placeholder="ej: No se presentó, viaja de vacaciones…"
+                autoFocus
+              />
+            </label>
+
+            {cancelErr && <div className="alert alert-error">{cancelErr}</div>}
+
+            <div className="row gap">
+              <button
+                type="button"
+                className="btn grow"
+                onClick={closeCancel}
+                disabled={cancelSaving}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger grow"
+                onClick={confirmCancelPassenger}
+                disabled={cancelSaving || !paxReason.trim()}
+              >
+                {cancelSaving ? 'Cancelando…' : 'Cancelar pasajero'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal: sustituir pasajero (cancela + agrega el nuevo) ===== */}
+      {replaceOpen && repPass && (
+        <div className="modal-backdrop" onClick={closeReplace}>
+          <div
+            className="card modal modal-wide"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sustituir pasajero"
+          >
+            <h2>Sustituir a {repPass.full_name}</h2>
+            <p className="muted small">
+              El pasajero actual se cancela con el comentario y el nuevo toma el mismo
+              origen y las mismas paradas.
+            </p>
+
+            <label className="field">
+              <span>Comentario / motivo de la cancelación *</span>
+              <textarea
+                rows={2}
+                value={repReason}
+                onChange={(e) => setRepReason(e.target.value)}
+                placeholder="ej: No puede viajar hoy"
+              />
+            </label>
+
+            {/* Nómina de trabajadores */}
+            <div className="field">
+              <span>Busca el reemplazo en la nómina</span>
+              <div className="row gap-sm">
+                <input
+                  className="grow"
+                  type="search"
+                  value={repQuery}
+                  onChange={(e) => setRepQuery(e.target.value)}
+                  onFocus={() => void loadRepEmployees()}
+                  placeholder="Nombre o cédula"
+                  aria-label="Buscar reemplazo en la nómina"
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void loadRepEmployees()}
+                  disabled={repLoading}
+                >
+                  <Search size={14} /> {repLoading ? 'Cargando…' : 'Buscar'}
+                </button>
+              </div>
+            </div>
+
+            {repLoading && <p className="muted small">Consultando la nómina…</p>}
+            {repLoadErr && (
+              <div className="alert alert-warn">
+                {repLoadErr}. Puedes usar el registro manual de abajo.
+              </div>
+            )}
+
+            {repResults.length > 0 && (
+              <ul className="ft-results">
+                {repResults.map((e) => (
+                  <li key={String(e.dni)} className="ft-result">
+                    <span className="ft-result-text">
+                      <strong>{up(employeeFullName(e))}</strong>
+                      <span className="muted small">
+                        C.I. {String(e.dni)}
+                        {e.role_name ? ` · ${up(e.role_name)}` : ''}
+                        {e.department_name ? ` · ${up(e.department_name)}` : ''}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      disabled={repSaving}
+                      onClick={() =>
+                        void replacePassenger({
+                          full_name: employeeFullName(e),
+                          dni: String(e.dni),
+                          phone: e.phone ?? null,
+                          role_name: e.role_name ?? null,
+                          department: e.department_name ?? null,
+                          branch_id: e.branch_id ?? null,
+                        })
+                      }
+                    >
+                      Elegir
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {repQuery.trim() && !repLoading && repEmployees && repResults.length === 0 && (
+              <p className="muted small">Sin coincidencias: usa el registro manual.</p>
+            )}
+
+            <div className="ft-or">
+              <span>o registro manual</span>
+            </div>
+
+            <div className="row gap">
+              <label className="field grow">
+                <span>Nombre *</span>
+                <input
+                  value={repName}
+                  onChange={(e) => setRepName(e.target.value)}
+                  placeholder="Nombre del reemplazo"
+                />
+              </label>
+              <label className="field grow">
+                <span>Cédula *</span>
+                <input
+                  value={repDni}
+                  onChange={(e) => setRepDni(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="Cédula"
+                />
+              </label>
+              <label className="field grow">
+                <span>Teléfono</span>
+                <input
+                  value={repPhone}
+                  onChange={(e) => setRepPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder="04xx…"
+                />
+              </label>
+            </div>
+
+            {repErr && <div className="alert alert-error">{repErr}</div>}
+
+            <div className="row gap">
+              <button
+                type="button"
+                className="btn grow"
+                onClick={closeReplace}
+                disabled={repSaving}
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary grow"
+                disabled={repSaving || !repName.trim() || !repDni.trim() || !repReason.trim()}
+                onClick={() =>
+                  void replacePassenger({
+                    full_name: repName,
+                    dni: repDni.trim(),
+                    phone: repPhone.trim() || null,
+                  })
+                }
+              >
+                {repSaving ? 'Sustituyendo…' : 'Sustituir'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ===== Modal: cancelar con motivo ===== */}
@@ -631,6 +1123,9 @@ export default function TripDetail() {
           </div>
         </div>
       )}
+
+      {/* ===== Mapa de la llegada (iframe, sin salir de la vista) ===== */}
+      <MapModal point={mapPoint} onClose={() => setMapPoint(null)} />
     </div>
   )
 }

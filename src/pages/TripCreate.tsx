@@ -85,6 +85,8 @@ export default function TripCreate() {
   const [employeeWarning, setEmployeeWarning] = useState<string | null>(null)
   const [passengerSearch, setPassengerSearch] = useState('')
   const [selected, setSelected] = useState<SelectedPassenger[]>([])
+  /** Pasajeros cancelados del viaje: se conservan al editar */
+  const [cancelledRows, setCancelledRows] = useState<TripPassenger[]>([])
   const [onlyActive, setOnlyActive] = useState(true)
 
   // Pasajero manual (persona que no aparece en la API)
@@ -263,8 +265,11 @@ export default function TripCreate() {
       setNotes(t.notes ?? '')
       setTrackKm(!!t.track_km)
       setDestinations(destRows)
+      // Solo los ACTIVOS entran al formulario; los cancelados se
+      // guardan aparte para re-insertarlos al guardar
+      const activeRows = passRows.filter((x) => x.status !== 'cancelado')
       setSelected(
-        passRows.map((x) => ({
+        activeRows.map((x) => ({
           dni: x.dni,
           full_name: x.full_name,
           role_name: x.role_name,
@@ -274,6 +279,7 @@ export default function TripCreate() {
           phone: x.phone,
         }))
       )
+      setCancelledRows(passRows.filter((x) => x.status === 'cancelado'))
       setPassengerOrigins(origins)
       setPassengerDests(dests)
       const obs: Record<string, string> = {}
@@ -715,6 +721,16 @@ export default function TripCreate() {
   async function save() {
     if (!vehicleId || !driverId) return
     if (selected.length === 0) return setError('Selecciona al menos un pasajero')
+
+    // La cédula de un activo no puede chocar con un cancelado
+    // (se re-insertan ambos al guardar)
+    const cancelledDnis = new Set(cancelledRows.map((c) => c.dni))
+    const conflict = selected.find((s) => cancelledDnis.has(s.dni))
+    if (conflict) {
+      return setError(
+        `La cédula ${conflict.dni} pertenece a un pasajero cancelado de este viaje: usa otra cédula para el nuevo pasajero.`
+      )
+    }
     if (overCapacity) return setError('La cantidad de pasajeros excede la capacidad')
     if (destinations.length === 0) return setError('Agrega al menos una ubicación')
     if (passengersWithoutOrigin.length > 0)
@@ -855,6 +871,44 @@ export default function TripCreate() {
       return
     }
 
+    // Pasajeros CANCELADOS: se re-insertan conservando su motivo,
+    // su fecha y su ubicación de origen
+    const cancelledIdByDni = new Map<string, number>()
+    if (cancelledRows.length > 0) {
+      const cRes = await supabase
+        .from('trip_passengers')
+        .insert(
+          cancelledRows.map((c) => ({
+            trip_id: tripId,
+            dni: c.dni,
+            full_name: c.full_name.toUpperCase(),
+            role_name: c.role_name,
+            department: c.department,
+            branch_id: c.branch_id,
+            phone: c.phone ?? null,
+            observation: c.observation ?? null,
+            status: 'cancelado',
+            cancel_reason: c.cancel_reason ?? null,
+            cancelled_at: c.cancelled_at ?? null,
+            origin_destination_id:
+              passengerOrigins[c.dni] != null
+                ? destIdByPos.get(passengerOrigins[c.dni]) ?? null
+                : null,
+          }))
+        )
+        .select('id, dni')
+      if (cRes.error) {
+        setError(
+          `Viaje guardado, pero no se pudieron conservar los pasajeros cancelados: ${cRes.error.message}`
+        )
+        setSaving(false)
+        return
+      }
+      for (const row of (cRes.data ?? []) as { id: number; dni: string }[]) {
+        cancelledIdByDni.set(row.dni, row.id)
+      }
+    }
+
     // Actualizar el catálogo con las ubicaciones usadas
     // (cubre viajes antiguos creados antes del catálogo)
     const { error: catErr } = await supabase.from('locations').upsert(
@@ -898,6 +952,30 @@ export default function TripCreate() {
         navigate(`/viajes/${tripId}`)
         return
       }
+    }
+
+    // Paradas de los pasajeros cancelados (se conservan)
+    const cancelledLinks: typeof links = []
+    for (const c of cancelledRows) {
+      const passId = cancelledIdByDni.get(c.dni)
+      if (!passId) continue
+      const positions = passengerDests[c.dni] ?? []
+      for (let i = 0; i < positions.length; i++) {
+        const destId = destIdByPos.get(positions[i])
+        if (destId) {
+          cancelledLinks.push({
+            trip_passenger_id: passId,
+            trip_destination_id: destId,
+            seq: i + 1,
+          })
+        }
+      }
+    }
+    if (cancelledLinks.length > 0) {
+      const { error: clErr } = await supabase
+        .from('trip_passenger_destinations')
+        .insert(cancelledLinks)
+      if (clErr) console.warn('Paradas de pasajeros cancelados:', clErr.message)
     }
 
     navigate(`/viajes/${tripId}`)
