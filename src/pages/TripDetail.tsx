@@ -315,6 +315,43 @@ export default function TripDetail() {
   const activePassengers = passengers.filter((p) => p.status !== 'cancelado')
   const cancelledCount = passengers.length - activePassengers.length
 
+  /**
+   * Mapa "pasajero cancelado -> quien lo sustituyó", armado con
+   * la observación "REEMPLAZA A <nombre>" de los reemplazos.
+   */
+  const replacedBy = new Map<string, string>()
+  for (const p of passengers) {
+    const obs = (p.observation ?? '').toUpperCase().trim()
+    if (obs.startsWith('REEMPLAZA A ')) {
+      replacedBy.set(obs.slice('REEMPLAZA A '.length).trim(), p.full_name.trim().toUpperCase())
+    }
+  }
+
+  /**
+   * Nombre de quien sustituyó a ESTE pasajero, o null si todavía
+   * no fue sustituido (marcado en su observación al sustituirlo
+   * o detectado por la observación del reemplazo).
+   * Un pasajero ya sustituido no se vuelve a sustituir: la
+   * cadena se administra desde el pasajero activo.
+   */
+  function replacedByName(p: TripPassenger): string | null {
+    const obs = (p.observation ?? '').toUpperCase()
+    const marker = obs.indexOf('SUSTITUIDO POR ')
+    if (marker >= 0) {
+      const who = obs.slice(marker + 'SUSTITUIDO POR '.length).trim()
+      if (who) return who
+    }
+    return replacedBy.get(p.full_name.trim().toUpperCase()) ?? null
+  }
+
+  /** Quita el marcador "SUSTITUIDO POR ..." de una observación */
+  function stripSubstitution(obs: string): string {
+    return obs
+      .replace(/\s*·\s*SUSTITUIDO POR .*$/i, '')
+      .replace(/^\s*SUSTITUIDO POR .*$/i, '')
+      .trim()
+  }
+
   // ===== Cancelar pasajero =====
   function openCancel(p: TripPassenger) {
     setCancelPass(p)
@@ -482,13 +519,22 @@ export default function TripDetail() {
       if (lErr) console.warn('No se copiaron las paradas:', lErr.message)
     }
 
-    // 3) Cancelar al pasajero original con el comentario
+    // 3) Cancelar al pasajero original con el comentario y marcar
+    //    que ya fue sustituido (para no permitir sustituirlo otra vez)
+    const marker = `SUSTITUIDO POR ${newP.full_name.trim().toUpperCase()}`
+    const prevObs = (repPass.observation ?? '').trim()
+    const observation = prevObs.toUpperCase().includes('SUSTITUIDO POR')
+      ? prevObs
+      : prevObs
+        ? `${prevObs} · ${marker}`
+        : marker
     const { error: cErr } = await supabase
       .from('trip_passengers')
       .update({
         status: 'cancelado',
         cancel_reason: repReason.trim().toUpperCase(),
         cancelled_at: new Date().toISOString(),
+        observation,
       })
       .eq('id', repPass.id)
 
@@ -697,6 +743,8 @@ export default function TripDetail() {
               : null
             const cancelled = p.status === 'cancelado'
             const canManage = trip.status === 'programado' || trip.status === 'en_curso'
+            // Si ya fue sustituido, no se vuelve a sustituir
+            const substituted = cancelled ? replacedByName(p) : null
             return (
               <li key={p.id}>
                 <div className={`list-item ${cancelled ? 'pass-cancelled' : ''}`}>
@@ -717,8 +765,15 @@ export default function TripDetail() {
                         Motivo: {p.cancel_reason || 'Sin comentario'}
                       </div>
                     )}
-                    {p.observation && (
-                      <div className="obs-note">Obs: {p.observation}</div>
+                    {substituted && (
+                      <div className="muted small replaced-note">
+                        Sustituido por {substituted}
+                      </div>
+                    )}
+                    {p.observation && stripSubstitution(p.observation) && (
+                      <div className="obs-note">
+                        Obs: {stripSubstitution(p.observation)}
+                      </div>
                     )}
                     {p.rated_at && (
                       <div className="rate-done">
@@ -828,13 +883,18 @@ export default function TripDetail() {
                               Cancelar
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            onClick={() => openReplace(p)}
-                          >
-                            {cancelled ? 'Reemplazar' : 'Sustituir'}
-                          </button>
+                          {/* Un pasajero ya sustituido ya no se
+                              sustituye otra vez: la cadena sigue
+                              desde el activo */}
+                          {!substituted && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => openReplace(p)}
+                            >
+                              {cancelled ? 'Reemplazar' : 'Sustituir'}
+                            </button>
+                          )}
                         </>
                       )}
                     </div>

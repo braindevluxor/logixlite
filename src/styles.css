@@ -3941,6 +3941,14 @@ button.maps-link:hover {
   display: inline-block;
 }
 
+/* Quién sustituyó a un pasajero cancelado (ya no se sustituye otra vez) */
+.replaced-note {
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
 /* ===== Notificar pasajero (fila del detalle) ===== */
 .notify-btn {
   flex-shrink: 0;
