@@ -4,7 +4,7 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
 
 ## Stack
 
-- **Frontend:** React 18 + Vite + TypeScript + `vite-plugin-pwa` (installable, funciona parcialmente offline)
+- **Frontend:** React 18 + Vite + TypeScript + `vite-plugin-pwa` (installable, funciona parcialmente offline) + Leaflet (selector de ubicaciones con OpenStreetMap)
 - **Backend/BD:** Supabase (PostgreSQL + Auth + RLS)
 - **Pasajeros:** API externa de Talento Humano (desarrolloluxor.lat)
 

@@ -16,6 +16,7 @@ import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { up } from '../lib/format'
 import RouteMap, { checkPointValue } from '../components/RouteMap'
+import PointInput from '../components/PointInput'
 import type {
   ApiEmployee,
   Branch,
@@ -1940,26 +1941,22 @@ export default function TripCreate() {
               />
             </label>
 
-            <label className="field">
-              <span>Enlace de Google Maps o coordenadas {pickNeedsUrl ? '*' : '(opcional)'}</span>
-              <input
-                type="text"
-                className="input-url"
+            <div className="field">
+              <span>
+                Ubicación en Google Maps {pickNeedsUrl ? '*' : '(opcional)'}
+              </span>
+              <PointInput
                 value={pickUrl}
-                onChange={(e) => {
-                  setPickUrl(e.target.value)
+                onChange={(v) => {
+                  setPickUrl(v)
                   setPickError('')
                 }}
-                placeholder="https://www.google.com/maps/… o 10.22239189, -67.55684945"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                aria-label="Enlace de Google Maps o coordenadas de la ubicación"
               />
-            </label>
+            </div>
             <p className="muted small" style={{ margin: '-0.4rem 0 0.6rem' }}>
-              Pega la URL del lugar o sus coordenadas (lat, lon). Es obligatorio la primera
-              vez que se crea una ubicación: así la ruta sale exacta.
+              Elige cómo marcarla: 1) pega el enlace, 2) escribe las coordenadas (lat,
+              lon) o 3) búscala en el mapa. Obligatorio la primera vez que se crea una
+              ubicación.
             </p>
 
             {pickNeedsUrl && !pickUrl.trim() && (

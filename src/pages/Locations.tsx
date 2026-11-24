@@ -3,6 +3,7 @@ import { ExternalLink, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import { checkPointValue } from '../components/RouteMap'
+import PointInput from '../components/PointInput'
 import { useSearch } from '../search/SearchContext'
 import type { CatalogLocation } from '../lib/types'
 
@@ -211,27 +212,14 @@ export default function Locations() {
               />
             </label>
 
-            <label className="field">
-              <span>
-                Enlace de Google Maps o coordenadas{' '}
-                {editing?.maps_url ? '(opcional)' : '*'}
-              </span>
-              <input
-                type="text"
-                className="input-url"
-                value={formUrl}
-                onChange={(e) => setFormUrl(e.target.value)}
-                placeholder="https://www.google.com/maps/… o 10.22239189, -67.55684945"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                required={!editing?.maps_url}
-              />
-            </label>
+            <div className="field">
+              <span>Ubicación en Google Maps {editing?.maps_url ? '(opcional)' : '*'}</span>
+              <PointInput value={formUrl} onChange={setFormUrl} />
+            </div>
             <p className="muted small" style={{ margin: '-0.4rem 0 0.7rem' }}>
               {editing?.maps_url
                 ? 'Déjalo vacío para conservar el enlace actual.'
-                : 'Obligatorio: sin el enlace el asistente pedirá la URL al usar esta ubicación.'}
+                : 'Obligatorio: elige el enlace, las coordenadas o búscala en el mapa.'}
             </p>
 
             <div className="row gap">
