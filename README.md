@@ -17,6 +17,13 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
    - Siembra las 15 sucursales detectadas en la API (branchID 5–20).
    - Después ejecuta [`supabase/fuel.sql`](supabase/fuel.sql): crea `fuel_records` y el campo
      `fuel_system` de los vehículos (gasolina / gnv / ambos) para el registro de combustible.
+   - SQLs incrementales (idempotentes; ejecútalos en orden si tu base ya existe):
+     `trip_share.sql`, `trip_km.sql`, `trip_origin.sql`, `trip_branch_optional.sql`,
+     `trip_edit_cancel.sql`, `trip_dest_seq.sql`, `allow_trip_delete.sql`,
+     `day_plan.sql`, `passenger_phone.sql`, `locations.sql`, `vehicle_photos.sql`,
+     `driver_link.sql` (link público del chofer + viaje libre), `driver_photos.sql`,
+     `public_branches.sql` (nómina en el viaje libre) y `trip_rating.sql`
+     (calificación del viaje con link único por pasajero).
 3. En **Authentication → Providers → Email**, desactiva "Confirm email" si quieres altas de usuario inmediatas.
 4. En **Authentication → Users → Add user**, crea tu usuario y contraseña.
 5. En **Project Settings → API**, copia la **Project URL** y la **anon key**.

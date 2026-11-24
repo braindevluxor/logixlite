@@ -39,6 +39,7 @@ import DriverTrip from './pages/DriverTrip'
 import DriverHome from './pages/DriverHome'
 import DriverTrips from './pages/DriverTrips'
 import FreeTrip from './pages/FreeTrip'
+import RateTrip from './pages/RateTrip'
 
 /**
  * Items del menu: se renderizan en la barra LATERAL (escritorio,
@@ -242,6 +243,9 @@ export default function App() {
       <Route path="/chofer/:token" element={<DriverHome />} />
       <Route path="/chofer/:token/pendientes" element={<DriverTrips />} />
       <Route path="/chofer/:token/libre" element={<FreeTrip />} />
+
+      {/* Calificacion del viaje: link publico unico por pasajero */}
+      <Route path="/calificar/:token" element={<RateTrip />} />
 
       <Route path="/login" element={<Login />} />
       <Route

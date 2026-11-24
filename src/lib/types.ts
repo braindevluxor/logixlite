@@ -111,6 +111,12 @@ export interface TripPassenger {
   observation: string | null
   /** Teléfono al momento de crear el viaje (instantánea) */
   phone: string | null
+  /** Token público y único del link de calificación (1 solo uso) */
+  rating_token?: string | null
+  /** Estrellas dadas por el pasajero (1 a 5) */
+  rating?: number | null
+  rating_comment?: string | null
+  rated_at?: string | null
 }
 
 export interface TripDestination {

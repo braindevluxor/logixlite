@@ -1589,6 +1589,126 @@ textarea {
   text-align: center;
 }
 
+/* ===== Calificacion del viaje (/calificar/:token) ===== */
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  line-height: 0;
+}
+
+.star-on {
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+
+.star-off {
+  color: #cbd5e1;
+  fill: none;
+}
+
+/* Estrellas ya dadas (lista de pasajeros del viaje) */
+.rate-done {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.rate-hello {
+  margin: 0;
+}
+
+.rate-name {
+  margin: 0.15rem 0 0;
+  font-size: 1.2rem;
+}
+
+.rate-ask {
+  margin: 0.9rem 0 0.2rem;
+  font-weight: 700;
+}
+
+.rate-kv {
+  margin-top: 0.7rem;
+}
+
+/* Selector de 5 estrellas */
+.rate-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 1.1rem 0 0.35rem;
+}
+
+.rate-star {
+  background: none;
+  border: none;
+  padding: 0.15rem;
+  cursor: pointer;
+  color: #cbd5e1;
+  line-height: 0;
+  transition:
+    transform 0.12s,
+    color 0.12s;
+}
+
+.rate-star.on {
+  color: #f59e0b;
+}
+
+.rate-star:hover {
+  transform: scale(1.12);
+}
+
+.rate-star:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.rate-hint {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+
+.rate-note {
+  text-align: center;
+  margin: 0.7rem 0 0;
+}
+
+/* Pantalla de agradecimiento */
+.rate-thanks {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rate-ok {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: var(--ok);
+}
+
+.rate-comment {
+  margin: 0.3rem 0 0;
+  font-style: italic;
+}
+
+.rate-thanks .rate-kv {
+  width: 100%;
+  text-align: left;
+}
+
 /* ===== Menu publico del chofer (/chofer/:token) ===== */
 
 /* Saludo: tarjeta con degradado azul */

@@ -9,9 +9,11 @@ import {
   Pencil,
   Send,
   Share2,
+  Star,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import Stars from '../components/Stars'
 import type {
   Branch,
   Driver,
@@ -265,6 +267,21 @@ export default function TripDetail() {
     return `${base}?text=${encodeURIComponent(msg)}`
   }
 
+  /** Link publico de calificacion del pasajero (unico y de un solo uso) */
+  function ratingUrl(p: TripPassenger): string | null {
+    return p.rating_token ? `${window.location.origin}/calificar/${p.rating_token}` : null
+  }
+
+  /** Mensaje de WhatsApp para pedirle la calificación del viaje */
+  function ratingMessage(p: TripPassenger): string {
+    return [
+      `Hola ${p.full_name}, gracias por viajar con LOGIXLITE.`,
+      '',
+      '¿Cómo estuvo tu experiencia? Califica el viaje con 5 estrellas y déjanos un comentario (opcional):',
+      ratingUrl(p) ?? '',
+    ].join('\n')
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -439,6 +456,14 @@ export default function TripDetail() {
                     {p.observation && (
                       <div className="obs-note">Obs: {p.observation}</div>
                     )}
+                    {p.rated_at && (
+                      <div className="rate-done">
+                        <Stars value={p.rating ?? 0} size={13} />
+                        <span className="muted small">
+                          Calificado{p.rating_comment ? ` — ${p.rating_comment}` : ''}
+                        </span>
+                      </div>
+                    )}
                     <div className="dest-tags">
                       <span className={`chip chip-origin ${originName ? 'on' : ''}`}>
                         <MapPin size={12} />{' '}
@@ -486,20 +511,41 @@ export default function TripDetail() {
                     </div>
                   </div>
 
-                  {trip.status === 'programado' && (
-                    <a
-                      className="btn btn-sm btn-whatsapp notify-btn"
-                      href={waUrl(passengerMessage(p), p.phone)}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={
-                        p.phone
-                          ? `WhatsApp de ${p.full_name}`
-                          : 'Abrir WhatsApp (sin teléfono: elige el contacto)'
-                      }
-                    >
-                      <Send size={14} /> Notificar
-                    </a>
+                  {(trip.status === 'programado' || trip.status === 'finalizado') && (
+                    <div className="row gap-sm">
+                      {trip.status === 'programado' && (
+                        <a
+                          className="btn btn-sm btn-whatsapp notify-btn"
+                          href={waUrl(passengerMessage(p), p.phone)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={
+                            p.phone
+                              ? `WhatsApp de ${p.full_name}`
+                              : 'Abrir WhatsApp (sin teléfono: elige el contacto)'
+                          }
+                        >
+                          <Send size={14} /> Notificar
+                        </a>
+                      )}
+
+                      {/* Viaje finalizado: pedir la calificación (link unico) */}
+                      {trip.status === 'finalizado' && ratingUrl(p) && (
+                        <a
+                          className="btn btn-sm btn-whatsapp notify-btn"
+                          href={waUrl(ratingMessage(p), p.phone)}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={
+                            p.phone
+                              ? `WhatsApp de ${p.full_name} con el link de calificación`
+                              : 'Abrir WhatsApp (sin teléfono: elige el contacto)'
+                          }
+                        >
+                          <Star size={14} /> Calificar
+                        </a>
+                      )}
+                    </div>
                   )}
                 </div>
               </li>
