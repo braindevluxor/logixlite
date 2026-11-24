@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  Banknote,
   Calendar,
   ChevronDown,
   CircleCheck,
   Clock,
+  CreditCard,
+  Fuel,
   Route,
   X,
 } from 'lucide-react'
@@ -37,6 +40,14 @@ interface DestLinkRow {
   seq: number | null
   trip_destination: { name: string } | null
   trip_passengers: { trip_id: number } | null
+}
+
+/** Fila de combustible usada en el dashboard */
+interface FuelRow {
+  amount_bs: number | string
+  amount_usd: number | string | null
+  quantity: number | string
+  payment_method: 'efectivo' | 'electronico'
 }
 
 interface DeptStat {
@@ -340,6 +351,8 @@ export default function Dashboard() {
   const [trips, setTrips] = useState<TripRow[]>([])
   const [passengers, setPassengers] = useState<PassRow[]>([])
   const [linkRows, setLinkRows] = useState<DestLinkRow[]>([])
+  // Cargas de combustible del rango (para el gasto efectivo/electrónico)
+  const [fuelRows, setFuelRows] = useState<FuelRow[]>([])
 
   // Modal de viajes pendientes
   const [showPending, setShowPending] = useState(false)
@@ -426,6 +439,31 @@ export default function Dashboard() {
     }
   }, [from, to])
 
+  // Gasto de combustible del rango (tolera la tabla inexistente:
+  // si fuel.sql no se ejecutó, simplemente queda en cero)
+  useEffect(() => {
+    let cancelled = false
+    async function loadFuel() {
+      const fromIso = new Date(`${from}T00:00:00`).toISOString()
+      const toIso = new Date(`${to}T23:59:59.999`).toISOString()
+      const { data, error } = await supabase
+        .from('fuel_records')
+        .select('amount_bs, amount_usd, quantity, payment_method')
+        .gte('fueled_at', fromIso)
+        .lte('fueled_at', toIso)
+      if (cancelled) return
+      if (error) {
+        setFuelRows([]) // tabla no creada o sin permisos: sin gasto
+        return
+      }
+      setFuelRows((data as FuelRow[]) ?? [])
+    }
+    void loadFuel()
+    return () => {
+      cancelled = true
+    }
+  }, [from, to])
+
   const stats = useMemo(() => {
     const listos = trips.filter((t) => t.status === 'finalizado').length
     const pendientes = trips.filter(
@@ -434,6 +472,34 @@ export default function Dashboard() {
     const cancelados = trips.filter((t) => t.status === 'cancelado').length
     return { listos, pendientes, cancelados, total: trips.length }
   }, [trips])
+
+  /** Formato de dinero: 1.234.567,89 */
+  const fmtMoney = (n: number) =>
+    n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  /** Gasto del rango separado por forma de pago */
+  const fuelTotals = useMemo(() => {
+    const make = () => ({ bs: 0, usd: 0, count: 0 })
+    const efectivo = make()
+    const electronico = make()
+    for (const r of fuelRows) {
+      const m = r.payment_method === 'efectivo' ? efectivo : electronico
+      m.bs += Number(r.amount_bs) || 0
+      m.usd += Number(r.amount_usd) || 0
+      m.count += 1
+    }
+    return {
+      efectivo,
+      electronico,
+      bs: efectivo.bs + electronico.bs,
+      usd: efectivo.usd + electronico.usd,
+      count: efectivo.count + electronico.count,
+    }
+  }, [fuelRows])
+
+  /** Porcentaje pagado en efectivo (para la barra proporcional) */
+  const pctEfectivo =
+    fuelTotals.bs > 0 ? Math.round((fuelTotals.efectivo.bs / fuelTotals.bs) * 100) : 0
 
   // Departamentos con más traslados (agrupa por department de la instantánea)
   const topDepts = useMemo(() => {
@@ -772,6 +838,66 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
+
+            {/* ---- Gasto de combustible: efectivo vs electrónico ---- */}
+            <Link
+              to="/combustible"
+              className="card stat-card stat-fuel"
+              title="Ver las cargas de combustible"
+            >
+              <span className="stat-icon stat-icon-fuel">
+                <Fuel size={20} />
+              </span>
+              <div className="stat-body">
+                <span className="stat-num">Bs {fmtMoney(fuelTotals.bs)}</span>
+                <span className="stat-label">
+                  Gasto de combustible · {fuelTotals.count}{' '}
+                  {fuelTotals.count === 1 ? 'carga' : 'cargas'}
+                </span>
+                <span className="muted small">
+                  $ {fmtMoney(fuelTotals.usd)} en el rango {from} → {to}
+                </span>
+
+                <div className="fuel-split">
+                  <div className="fuel-split-item">
+                    <span className="fuel-split-label">
+                      <Banknote size={11} /> Efectivo
+                    </span>
+                    <strong>Bs {fmtMoney(fuelTotals.efectivo.bs)}</strong>
+                    <span className="fuel-split-sub">
+                      $ {fmtMoney(fuelTotals.efectivo.usd)} · {fuelTotals.efectivo.count}
+                    </span>
+                  </div>
+                  <div className="fuel-split-item">
+                    <span className="fuel-split-label">
+                      <CreditCard size={11} /> Electrónico
+                    </span>
+                    <strong>Bs {fmtMoney(fuelTotals.electronico.bs)}</strong>
+                    <span className="fuel-split-sub">
+                      $ {fmtMoney(fuelTotals.electronico.usd)} ·{' '}
+                      {fuelTotals.electronico.count}
+                    </span>
+                  </div>
+                </div>
+
+                {fuelTotals.count > 0 && (
+                  <div className="fuel-bar" aria-hidden="true">
+                    <span
+                      className="fuel-bar-ef"
+                      style={{ width: `${pctEfectivo}%` }}
+                    />
+                    <span
+                      className="fuel-bar-el"
+                      style={{ width: `${100 - pctEfectivo}%` }}
+                    />
+                  </div>
+                )}
+
+                <span className="stat-cta">
+                  Ver combustible <ArrowRight size={13} />
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* ---- Curva: viajes por día (sumatoria) ---- */}
