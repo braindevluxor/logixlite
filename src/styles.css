@@ -2943,100 +2943,132 @@ code {
   margin: 0.25rem 0 0;
 }
 
-/* ===== Tutorial paso a paso (vista del chofer) ===== */
-.tut-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-height: 65vh;
-  overflow-y: auto;
-  padding-right: 0.25rem;
-}
-
-.tut-step {
-  display: flex;
-  gap: 0.7rem;
-}
-
-.tut-num {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  margin-top: 2px;
-  border-radius: 50%;
-  background: var(--primary);
+/* ===== Tutorial interactivo con resaltado (vista del chofer) ===== */
+.btn-tutorial {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f59e0b;
   color: #fff;
-  font-size: 0.8rem;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 700;
-  display: grid;
-  place-items: center;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s,
+    background 0.2s;
 }
 
-.tut-step-body {
-  min-width: 0;
+.btn-tutorial:hover {
+  background: #d97706;
+  transform: translateY(-1px);
 }
 
-.tut-step-body h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.97rem;
+/* Bloquea la interaccion con la pagina durante el tour */
+.tour-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
 }
 
-.tut-step-body p {
-  margin: 0 0 0.45rem;
-  font-size: 0.86rem;
-  line-height: 1.55;
+/* Elemento activo: sombra oscura hacia afuera + anillo celeste */
+.tour-spotlight {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 9999px rgba(15, 23, 42, 0.78),
+    0 0 0 4px #38bdf8;
+  transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+}
+
+/* Cuadro flotante con las instrucciones */
+.tour-popover {
+  position: fixed;
+  z-index: 10000;
+  background: #ffffff;
+  color: var(--text);
+  width: 310px;
+  max-width: calc(100vw - 32px);
+  padding: 18px 20px;
+  border-radius: 12px;
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+  transition:
+    top 0.35s ease,
+    left 0.35s ease;
+}
+
+.tour-step-badge {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.tour-popover h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.tour-popover p {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.tour-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tour-btn {
+  border: none;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-btn-close {
+  background: transparent;
   color: var(--muted);
+  padding-left: 0;
 }
 
-.tut-step-body p:last-child {
-  margin-bottom: 0;
-}
-
-.tut-list {
-  margin: 0 0 0.45rem;
-  padding-left: 1.15rem;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  color: var(--muted);
-}
-
-.tut-list li {
-  margin-bottom: 0.25rem;
-}
-
-.tut-list li:last-child {
-  margin-bottom: 0;
-}
-
-/* Texto fuerte dentro de la guia */
-.tut-step-body strong,
-.tut-list strong {
+.tour-btn-close:hover {
   color: var(--text);
 }
 
-/* Elementos resaltados: botones y campos de la app */
-.tut-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.08rem 0.5rem;
-  border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
+.tour-btn-prev {
+  background: #e2e8f0;
+  color: #334155;
+  margin-right: 6px;
 }
 
-.tut-field {
-  display: inline-flex;
-  padding: 0.08rem 0.5rem;
-  border: 1px dashed var(--primary);
-  border-radius: 999px;
-  background: #eff6ff;
-  color: var(--primary-dark);
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
+.tour-btn-prev:hover {
+  background: #cbd5e1;
+}
+
+.tour-btn-next {
+  background: var(--primary);
+  color: #fff;
+}
+
+.tour-btn-next:hover {
+  background: var(--primary-dark);
 }
 
 .pending-list {

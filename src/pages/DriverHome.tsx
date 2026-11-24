@@ -12,8 +12,42 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
-import DriverTutorial from '../components/DriverTutorial'
+import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
 import type { DriverLinkData, TripStatus } from '../lib/types'
+
+/** Pasos del tour interactivo del menu del chofer */
+const TOUR_STEPS: TourStep[] = [
+  {
+    target: '[data-tour="hello"]',
+    title: 'Tu perfil',
+    description:
+      'Aquí ves tu nombre y tu cédula. Si algo no coincide, avisa a la oficina.',
+  },
+  {
+    target: '[data-tour="live"]',
+    title: 'Viaje libre en curso',
+    description:
+      'Si tienes un viaje libre activo aparece aquí, con la cantidad de pasajeros y paradas registradas. Tócalo para entrar.',
+  },
+  {
+    target: '[data-tour="pending"]',
+    title: 'Viajes pendientes',
+    description:
+      'Toca esta tarjeta para ver tus viajes asignados: estado, fecha y hora, paradas, pasajeros, vehículo y sucursal.',
+  },
+  {
+    target: '[data-tour="libre"]',
+    title: 'Viaje libre',
+    description:
+      'Entra aquí para registrar a quienes llevas y cada parada del recorrido, sin necesidad de un viaje asignado.',
+  },
+  {
+    target: '[data-tour="tutorial"]',
+    title: 'Botón Tutorial',
+    description:
+      'Este botón vuelve a abrir este tour en cualquier momento, también desde el viaje y el viaje libre.',
+  },
+]
 
 const STATUS_LABEL: Record<TripStatus, string> = {
   programado: 'Programado',
@@ -114,16 +148,17 @@ export default function DriverHome() {
         </span>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn-tutorial"
+          data-tour="tutorial"
           onClick={() => setShowTut(true)}
         >
-          <BookOpen size={15} /> Tutorial
+          <BookOpen size={14} /> Tutorial
         </button>
       </header>
 
       <main className="driver-main">
         {/* Saludo */}
-        <div className="driver-card dm-hello">
+        <div className="driver-card dm-hello" data-tour="hello">
           <span className="dm-avatar" aria-hidden="true">
             {ini}
           </span>
@@ -139,6 +174,7 @@ export default function DriverHome() {
           <button
             type="button"
             className="menu-option mo-live"
+            data-tour="live"
             onClick={() => navigate(`/chofer/${token}/libre`)}
           >
             <span className="mo-icon">
@@ -155,7 +191,12 @@ export default function DriverHome() {
 
         {/* Menu principal: tarjetas */}
         <div className="driver-menu">
-          <button type="button" className="menu-option" onClick={() => setView('pending')}>
+          <button
+            type="button"
+            className="menu-option"
+            data-tour="pending"
+            onClick={() => setView('pending')}
+          >
             <span className="mo-icon">
               <CalendarClock size={24} />
             </span>
@@ -172,6 +213,7 @@ export default function DriverHome() {
           <button
             type="button"
             className="menu-option"
+            data-tour="libre"
             onClick={() => navigate(`/chofer/${token}/libre`)}
           >
             <span className="mo-icon">
@@ -255,8 +297,8 @@ export default function DriverHome() {
         )}
       </main>
 
-      {/* Tutorial paso a paso */}
-      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
+      {/* Tutorial interactivo con resaltado */}
+      <SpotlightTour open={showTut} steps={TOUR_STEPS} onClose={() => setShowTut(false)} />
     </div>
   )
 }

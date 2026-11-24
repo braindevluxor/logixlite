@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
-import DriverTutorial from '../components/DriverTutorial'
+import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
 import type {
   SharedTrip,
   TripPassengerDestination,
@@ -386,6 +386,64 @@ export default function DriverTrip() {
       .sort((a, b) => a.passenger!.full_name.localeCompare(b.passenger!.full_name)),
   }))
 
+  /** Pasos del tour: cambian segun el estado del viaje */
+  const tourSteps: TourStep[] = [
+    {
+      target: '[data-tour="status"]',
+      title: 'Estado del viaje',
+      description:
+        'Indica si el viaje está Programado, En curso o Finalizado. Todo el resto de la pantalla se comporta según este estado.',
+    },
+    {
+      target: '[data-tour="progress"]',
+      title: 'Avance de llegadas',
+      description:
+        'Barra con las llegadas registradas sobre el total. Al llegar al 100% el viaje se finaliza solo.',
+    },
+    ...(trip.status === 'programado'
+      ? [
+          {
+            target: '[data-tour="start"]',
+            title: 'Iniciar viaje',
+            description:
+              'Toca este botón para comenzar. Hasta que lo hagas, cada pasajero mostrará "Esperando inicio".',
+          },
+        ]
+      : []),
+    ...(trip.status === 'en_curso'
+      ? [
+          {
+            target: '[data-tour="arrive"]',
+            title: 'Marcar llegada',
+            description:
+              'Junto a cada pasajero. Abre el recuadro con hora, ubicación GPS y kilometraje para confirmar su bajada; al confirmar cambia a "Llegó".',
+          },
+          {
+            target: '[data-tour="novedad"]',
+            title: 'Novedad',
+            description:
+              'Reporta un incidente del pasajero: no se presentó, llegó tarde o cambió de parada. Solo escribes el motivo y envías.',
+          },
+        ]
+      : []),
+    ...(trip.status === 'programado' || trip.status === 'en_curso'
+      ? [
+          {
+            target: '[data-tour="cancel"]',
+            title: 'Cancelar viaje',
+            description:
+              'Solo si el viaje no puede salir: pide el motivo obligatorio y queda registrado como incidencia del viaje.',
+          },
+        ]
+      : []),
+    {
+      target: '[data-tour="tutorial"]',
+      title: 'Botón Tutorial',
+      description:
+        'Este botón vuelve a abrir el tour con el paso a paso del sistema en cualquier momento.',
+    },
+  ]
+
   return (
     <div className="driver-page">
       <header className="topbar">
@@ -397,13 +455,16 @@ export default function DriverTrip() {
           />
           LOGIXLITE
         </span>
-        <span className={`badge badge-${trip.status}`}>{STATUS_LABEL[trip.status]}</span>
+        <span className={`badge badge-${trip.status}`} data-tour="status">
+          {STATUS_LABEL[trip.status]}
+        </span>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="btn-tutorial"
+          data-tour="tutorial"
           onClick={() => setShowTut(true)}
         >
-          <BookOpen size={15} /> Tutorial
+          <BookOpen size={14} /> Tutorial
         </button>
       </header>
 
@@ -433,7 +494,7 @@ export default function DriverTrip() {
             </div>
           </div>
 
-          <div className="driver-progress">
+          <div className="driver-progress" data-tour="progress">
             <div className="row spread">
               <span>
                 Llegadas: <strong>{arrivedCount}</strong> / {totalAssignments}
@@ -458,6 +519,7 @@ export default function DriverTrip() {
               </p>
               <button
                 className="btn btn-primary btn-block"
+                data-tour="start"
                 onClick={startTrip}
                 disabled={starting}
               >
@@ -471,6 +533,7 @@ export default function DriverTrip() {
               {!showCancelForm ? (
                 <button
                   className="btn btn-danger btn-block"
+                  data-tour="cancel"
                   onClick={() => setShowCancelForm(true)}
                 >
                   <Ban size={15} /> Cancelar viaje
@@ -598,6 +661,7 @@ export default function DriverTrip() {
                         <div className="pass-actions">
                           <button
                             className="btn btn-sm btn-novedad"
+                            data-tour="novedad"
                             disabled={trip.status === 'cancelado'}
                             onClick={() =>
                               setQuickIncident({
@@ -626,6 +690,7 @@ export default function DriverTrip() {
                           ) : (
                             <button
                               className="btn btn-primary"
+                              data-tour="arrive"
                               disabled={trip.status !== 'en_curso'}
                               onClick={() =>
                                 openArrival(link, passenger!, dest.name)
@@ -815,8 +880,8 @@ export default function DriverTrip() {
         </div>
       )}
 
-      {/* Tutorial paso a paso */}
-      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
+      {/* Tutorial interactivo con resaltado */}
+      <SpotlightTour open={showTut} steps={tourSteps} onClose={() => setShowTut(false)} />
     </div>
   )
 }

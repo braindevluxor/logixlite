@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
-import DriverTutorial from '../components/DriverTutorial'
+import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
 import type { DriverLinkData } from '../lib/types'
 
 function fmtDateTime(iso: string): string {
@@ -218,6 +218,61 @@ export default function FreeTrip() {
 
   const ini = initials(data.driver.full_name) || 'C'
 
+  /** Pasos del tour: cambian segun haya viaje activo o no */
+  const tourSteps: TourStep[] = trip
+    ? [
+        {
+          target: '[data-tour="active"]',
+          title: 'Viaje libre en curso',
+          description:
+            'Muestra la hora en que iniciaste. Desde aquí finalizas el viaje cuando termines el recorrido.',
+        },
+        {
+          target: '[data-tour="p-name"]',
+          title: 'Nombre del pasajero',
+          description:
+            'Escribe quién va contigo (obligatorio). Opcionalmente agrega su cédula y teléfono en los campos de al lado.',
+        },
+        {
+          target: '[data-tour="p-add"]',
+          title: 'Agregar pasajero',
+          description:
+            'Toca este botón para registrarlo: quedará numerado en la lista. La X lo quita si te equivocaste.',
+        },
+        {
+          target: '[data-tour="s-name"]',
+          title: 'Parada',
+          description:
+            'Escribe la parada donde dejas a alguien (ej: TERMINAL) y, si quieres, una nota opcional.',
+        },
+        {
+          target: '[data-tour="s-add"]',
+          title: 'Agregar parada',
+          description:
+            'La parada se guarda con la hora de llegada automáticamente y aparece numerada en la lista.',
+        },
+        {
+          target: '[data-tour="finish"]',
+          title: 'Finalizar viaje',
+          description:
+            'Al terminar el recorrido toca aquí (pide confirmación) y verás el resumen con pasajeros y paradas.',
+        },
+      ]
+    : [
+        {
+          target: '[data-tour="start"]',
+          title: 'Iniciar viaje libre',
+          description:
+            'Toca este botón para comenzar el recorrido. No necesitas tener un viaje asignado.',
+        },
+        {
+          target: '[data-tour="tutorial"]',
+          title: 'Botón Tutorial',
+          description:
+            'Este botón vuelve a abrir el tour con el paso a paso del sistema.',
+        },
+      ]
+
   return (
     <div className="driver-page">
       <header className="topbar">
@@ -232,10 +287,11 @@ export default function FreeTrip() {
         <div className="row gap-sm">
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn-tutorial"
+            data-tour="tutorial"
             onClick={() => setShowTut(true)}
           >
-            <BookOpen size={15} /> Tutorial
+            <BookOpen size={14} /> Tutorial
           </button>
           <Link className="btn btn-primary" to={`/chofer/${token}`}>
             <ArrowLeft size={15} /> Menú
@@ -281,6 +337,7 @@ export default function FreeTrip() {
               <button
                 type="button"
                 className="btn btn-primary btn-block"
+                data-tour="start"
                 onClick={start}
                 disabled={busy}
               >
@@ -308,6 +365,7 @@ export default function FreeTrip() {
               <button
                 type="button"
                 className="btn btn-primary btn-block"
+                data-tour="start"
                 onClick={start}
                 disabled={busy}
               >
@@ -323,7 +381,7 @@ export default function FreeTrip() {
         {/* Viaje libre activo */}
         {trip && (
           <>
-            <div className="driver-card ft-live">
+            <div className="driver-card ft-live" data-tour="active">
               <div className="ft-live-head">
                 <span className="ft-live-icon" aria-hidden="true">
                   <Play size={22} />
@@ -337,6 +395,7 @@ export default function FreeTrip() {
               <button
                 type="button"
                 className="btn btn-primary btn-block"
+                data-tour="finish"
                 onClick={finish}
                 disabled={busy}
               >
@@ -357,6 +416,7 @@ export default function FreeTrip() {
               <form className="ft-form" onSubmit={addPassenger}>
                 <input
                   className="grow"
+                  data-tour="p-name"
                   placeholder="Nombre del pasajero *"
                   value={pName}
                   onChange={(e) => setPName(e.target.value)}
@@ -376,7 +436,12 @@ export default function FreeTrip() {
                   inputMode="tel"
                   aria-label="Teléfono del pasajero"
                 />
-                <button type="submit" className="btn btn-primary" disabled={addingP}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  data-tour="p-add"
+                  disabled={addingP}
+                >
                   <Plus size={15} /> {addingP ? 'Agregando…' : 'Agregar'}
                 </button>
               </form>
@@ -430,6 +495,7 @@ export default function FreeTrip() {
               <form className="ft-form" onSubmit={addStop}>
                 <input
                   className="grow"
+                  data-tour="s-name"
                   placeholder="Parada (ej. TERMINAL) *"
                   value={sName}
                   onChange={(e) => setSName(e.target.value)}
@@ -441,7 +507,12 @@ export default function FreeTrip() {
                   onChange={(e) => setSNote(e.target.value)}
                   aria-label="Nota de la parada"
                 />
-                <button type="submit" className="btn btn-primary" disabled={addingS}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  data-tour="s-add"
+                  disabled={addingS}
+                >
                   <Plus size={15} /> {addingS ? 'Agregando…' : 'Agregar'}
                 </button>
               </form>
@@ -481,8 +552,8 @@ export default function FreeTrip() {
         )}
       </main>
 
-      {/* Tutorial paso a paso */}
-      <DriverTutorial open={showTut} onClose={() => setShowTut(false)} />
+      {/* Tutorial interactivo con resaltado */}
+      <SpotlightTour open={showTut} steps={tourSteps} onClose={() => setShowTut(false)} />
 
       {toast && <div className="toast">{toast}</div>}
     </div>
