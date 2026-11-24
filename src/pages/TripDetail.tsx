@@ -17,6 +17,7 @@ import { up } from '../lib/format'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import Stars from '../components/Stars'
 import MapModal, { type MapPoint } from '../components/MapModal'
+import RouteMap from '../components/RouteMap'
 import type {
   ApiEmployee,
   Branch,
@@ -662,6 +663,14 @@ export default function TripDetail() {
             )
           })}
         </ol>
+      )}
+
+      {/* Mapa de la ruta del viaje (aplica a viajes nuevos y viejos) */}
+      {destinations.length > 0 && (
+        <RouteMap
+          origin={destinations[0].name}
+          destination={destinations[destinations.length - 1].name}
+        />
       )}
 
       <h2>
