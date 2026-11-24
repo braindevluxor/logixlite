@@ -119,6 +119,8 @@ export default function TripCreate() {
   const [passengerOrigins, setPassengerOrigins] = useState<Record<string, number>>({})
   // Observación individual por pasajero (ej. "Fumigación")
   const [passengerObs, setPassengerObs] = useState<Record<string, string>>({})
+  // Dropdown de ubicaciones abierto (por pasajero)
+  const [openDestMenu, setOpenDestMenu] = useState<string | null>(null)
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? null
   const capacity = vehicle?.capacity ?? 0
@@ -522,6 +524,7 @@ export default function TripCreate() {
     setPickQuery('')
     setPickUrl('')
     setPickError('')
+    setOpenDestMenu(null)
     setPicker(mode === 'trip' ? { mode } : { mode, dni: dni! })
   }
 
@@ -1491,39 +1494,93 @@ export default function TripCreate() {
                       <div className="assign-label">
                         <MapPin size={13} /> Origen (sube)
                       </div>
-                      <div className="chips">
-                        {destinations.map((d) => {
-                          const on = originPos === d.position
-                          return (
-                            <button
-                              type="button"
-                              key={`o-${d.position}`}
-                              className={`chip chip-origin ${on ? 'on' : ''}`}
-                              onClick={() =>
-                                setPassengerOrigin(p.dni, on ? null : d.position)
-                              }
-                            >
-                              {up(d.name)}
-                            </button>
-                          )
-                        })}
-                        <button
-                          type="button"
-                          className="chip chip-add"
-                          onClick={() => openPicker('origin', p.dni)}
-                        >
-                          + Otra ubicación
-                        </button>
-                      </div>
+                      <select
+                        className="assign-select"
+                        value={originPos ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          if (v === '__new__') {
+                            openPicker('origin', p.dni)
+                            return
+                          }
+                          setPassengerOrigin(p.dni, v ? Number(v) : null)
+                        }}
+                        aria-label={`Origen de ${p.full_name}`}
+                      >
+                        <option value="">— Selecciona el origen —</option>
+                        {destinations.map((d) => (
+                          <option key={d.position} value={d.position}>
+                            {up(d.name)}
+                          </option>
+                        ))}
+                        <option value="__new__">+ Otra ubicación…</option>
+                      </select>
                       {missingOrigin && (
                         <span className="assign-warning">
                           Selecciona el origen (donde sube)
                         </span>
                       )}
 
-                      {/* UBICACIONES: orden de bajada */}
+                      {/* UBICACIONES: selector múltiple + orden de bajada */}
                       <div className="assign-label">
                         <Flag size={13} /> Ubicaciones (baja) — orden de bajada
+                      </div>
+
+                      {/* Dropdown de ubicaciones (selección múltiple) */}
+                      <div className="dd">
+                        <button
+                          type="button"
+                          className={`dd-toggle ${
+                            openDestMenu === p.dni ? 'open' : ''
+                          } ${assigned.length > 0 ? 'has' : ''}`}
+                          onClick={() =>
+                            setOpenDestMenu(openDestMenu === p.dni ? null : p.dni)
+                          }
+                          aria-expanded={openDestMenu === p.dni}
+                        >
+                          <span>
+                            {assigned.length > 0
+                              ? `${assigned.length} ubicación(es) seleccionada(s)`
+                              : 'Selecciona las ubicaciones'}
+                          </span>
+                          <ChevronDown size={15} />
+                        </button>
+
+                        {openDestMenu === p.dni && (
+                          <div className="dd-panel">
+                            {destinations.length === 0 ? (
+                              <p className="muted small dd-empty">
+                                Primero agrega paradas a la ruta del vehículo.
+                              </p>
+                            ) : (
+                              destinations.map((d) => {
+                                const on = assigned.includes(d.position)
+                                return (
+                                  <label key={d.position} className="dd-item">
+                                    <input
+                                      type="checkbox"
+                                      checked={on}
+                                      onChange={() =>
+                                        togglePassengerDest(p.dni, d.position)
+                                      }
+                                    />
+                                    <span>{up(d.name)}</span>
+                                  </label>
+                                )
+                              })
+                            )}
+                            <button
+                              type="button"
+                              className="dd-add"
+                              onClick={() => {
+                                setOpenDestMenu(null)
+                                openPicker('route', p.dni)
+                              }}
+                            >
+                              <Search size={13} /> Buscar o crear ubicación
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {assigned.length > 0 && (
@@ -1569,28 +1626,6 @@ export default function TripCreate() {
                           })}
                         </ol>
                       )}
-
-                      <div className="chips">
-                        {destinations
-                          .filter((d) => !assigned.includes(d.position))
-                          .map((d) => (
-                            <button
-                              type="button"
-                              key={`d-${d.position}`}
-                              className="chip chip-add"
-                              onClick={() => togglePassengerDest(p.dni, d.position)}
-                            >
-                              + {up(d.name)}
-                            </button>
-                          ))}
-                        <button
-                          type="button"
-                          className="chip chip-add chip-new"
-                          onClick={() => openPicker('route', p.dni)}
-                        >
-                          <Search size={12} /> Buscar o crear ubicación
-                        </button>
-                      </div>
 
                       {missingDest && (
                         <span className="assign-warning">
