@@ -75,6 +75,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Service worker también en desarrollo: así el botón
+      // "Instalar app" se puede probar en localhost igual que en
+      // producción (el SW de desarrollo es mínimo, sin caché)
+      devOptions: { enabled: true, type: 'module' },
       includeAssets: ['favicon.png', 'logo-mark.png', 'icons/*.png'],
       manifest: {
         name: 'LOGIXLITE - Administración de Flota',

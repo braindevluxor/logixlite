@@ -38,11 +38,31 @@ function isIOS(): boolean {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent)
 }
 
+/** Instrucciones manuales cuando el navegador no ofrece el prompt */
+function showInstructions(): void {
+  if (isIOS()) {
+    window.alert(
+      'Para instalar la app en iPhone/iPad:\n\n' +
+        '1) Toca el botón Compartir de Safari (cuadrado con flecha)\n' +
+        '2) Elige "Agregar a pantalla de inicio"\n' +
+        '3) Confirma con "Agregar"'
+    )
+    return
+  }
+  window.alert(
+    'Este navegador no ofrece la instalación automática.\n\n' +
+      '• Chrome / Edge (escritorio o Android): menú ⋮ → "Instalar LOGIXLITE" o "Añadir a pantalla de inicio".\n' +
+      '• Safari (iPhone/iPad): Compartir → "Agregar a pantalla de inicio".'
+  )
+}
+
 /**
  * Instalación de la PWA desde las vistas públicas del chofer.
  * - Chrome/Edge/Android: usa el prompt nativo del navegador.
- * - iOS: muestra instrucciones de "Agregar a pantalla de inicio".
+ * - iOS o navegador sin soporte: muestra instrucciones.
  * - Si ya está instalada, el botón no se renderiza.
+ * - Nunca falla en silencio: si el prompt no abre, se explican
+ *   las instrucciones manuales.
  */
 export function useInstallApp() {
   const [available, setAvailable] = useState(deferred !== null && !isStandalone())
@@ -61,22 +81,7 @@ export function useInstallApp() {
 
   async function install(): Promise<void> {
     if (!deferred) {
-      if (isIOS()) {
-        window.alert(
-          'Para instalar la app en iPhone/iPad:\n\n' +
-            '1) Toca el botón Compartir de Safari (cuadrado con flecha)\n' +
-            '2) Elige "Agregar a pantalla de inicio"\n' +
-            '3) Confirma con "Agregar"'
-        )
-        return
-      }
-      // Navegador sin soporte del prompt (o en desarrollo, sin
-      // service worker): se dan las instrucciones manuales
-      window.alert(
-        'Este navegador no ofrece la instalación automática.\n\n' +
-          '• Chrome / Edge (escritorio o Android): menú ⋮ → "Instalar LOGIXLITE" o "Añadir a pantalla de inicio".\n' +
-          '• Safari (iPhone/iPad): Compartir → "Agregar a pantalla de inicio".'
-      )
+      showInstructions()
       return
     }
 
@@ -87,8 +92,10 @@ export function useInstallApp() {
       await prompt.prompt()
       const { outcome } = await prompt.userChoice
       if (outcome === 'accepted') setInstalled(true)
-    } catch {
-      // El navegador canceló el prompt (el usuario ya decidió o no aplica)
+    } catch (err) {
+      // Evento vencido o gesto no válido: nunca fallar en silencio
+      console.warn('No se pudo abrir el diálogo de instalación:', err)
+      showInstructions()
     }
   }
 
