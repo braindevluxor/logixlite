@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
-import { MapPin, Plus, Send, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { CircleCheck, MapPin, Plus, Send, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { SOLICITUD_ORIGEN, type SolicitudRow } from '../lib/rideRequest'
+import type { ApiEmployee } from '../lib/types'
 
 const EMPTY_ROW: SolicitudRow = { full_name: '', dni: '', destination: '' }
 
@@ -22,6 +24,96 @@ export default function RideRequest() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [sentCount, setSentCount] = useState(0)
+
+  // ---- Nómina de trabajadores (búsqueda por CÉDULA) ----
+  const [roster, setRoster] = useState<ApiEmployee[] | null>(null)
+  const [rosterState, setRosterState] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    'idle'
+  )
+  const [rosterError, setRosterError] = useState<string | null>(null)
+
+  /** Carga la nómina de TODAS las sucursales (una sola vez) */
+  async function loadRoster() {
+    if (rosterState === 'loading' || rosterState === 'ready') return
+    setRosterState('loading')
+    setRosterError(null)
+    try {
+      const { data: br, error: brErr } = await supabase.rpc('public_branches')
+      if (brErr) {
+        throw new Error(
+          brErr.message.includes('public_branches')
+            ? 'SIN_SQL'
+            : brErr.message
+        )
+      }
+      const branches = (br ?? []) as { external_id: number }[]
+      if (branches.length === 0) throw new Error('No hay sucursales registradas')
+
+      const results = await Promise.allSettled(
+        branches.map((b) => fetchEmployees(b.external_id))
+      )
+      const ok = results.filter(
+        (r): r is PromiseFulfilledResult<ApiEmployee[]> => r.status === 'fulfilled'
+      )
+      if (ok.length === 0) throw new Error('La nómina no respondió en ninguna sucursal')
+
+      const seen = new Set<string>()
+      setRoster(
+        ok.flatMap((r) => r.value).filter((e) => {
+          const dni = String(e.dni)
+          if (seen.has(dni)) return false
+          seen.add(dni)
+          return true
+        })
+      )
+      setRosterState('ready')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al consultar la nómina'
+      setRosterError(
+        msg === 'SIN_SQL'
+          ? 'Nómina no disponible (ejecuta supabase/public_branches.sql). Escribe el nombre a mano.'
+          : `${msg}. Escribe el nombre a mano.`
+      )
+      setRosterState('error')
+    }
+  }
+
+  /** Busca la cédula en la nómina (null si no está o no cargó) */
+  function findByDni(dni: string): ApiEmployee | null {
+    const d = dni.trim()
+    if (!d || !roster) return null
+    return roster.find((e) => String(e.dni) === d) ?? null
+  }
+
+  /** Al escribir la cédula, completa el nombre desde la nómina */
+  function onDniChange(i: number, value: string) {
+    const found = roster ? roster.find((e) => String(e.dni) === value.trim()) : null
+    setRows((prev) =>
+      prev.map((row, j) =>
+        j === i
+          ? {
+              ...row,
+              dni: value,
+              ...(found ? { full_name: employeeFullName(found) } : {}),
+            }
+          : row
+      )
+    )
+  }
+
+  // Si la nómina carga después de escribir las cédulas, completa
+  // los nombres que ya estén en la lista
+  useEffect(() => {
+    if (rosterState !== 'ready' || !roster) return
+    setRows((prev) =>
+      prev.map((row) => {
+        const found = findByDni(row.dni)
+        const name = found ? employeeFullName(found) : row.full_name
+        return name === row.full_name ? row : { ...row, full_name: name }
+      })
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosterState, roster])
 
   // ---- Destinos del traslado ----
   function addDestination() {
@@ -213,52 +305,80 @@ export default function RideRequest() {
               {/* ---- Trabajadores ---- */}
               <div className="assign-label">Trabajadores</div>
               <div className="ft-list">
-                {rows.map((r, i) => (
-                  <div key={i} className="ft-row sol-row">
-                    <span className="ft-seq">{i + 1}</span>
-                    <div className="sol-fields">
-                      <input
-                        value={r.full_name}
-                        onChange={(e) => updateRow(i, { full_name: e.target.value })}
-                        placeholder="Nombre completo *"
-                        aria-label={`Nombre del trabajador ${i + 1}`}
-                      />
-                      <input
-                        value={r.dni}
-                        onChange={(e) => updateRow(i, { dni: e.target.value })}
-                        placeholder="Cédula *"
-                        inputMode="numeric"
-                        aria-label={`Cédula del trabajador ${i + 1}`}
-                      />
-                      <select
-                        value={r.destination}
-                        onChange={(e) => updateRow(i, { destination: e.target.value })}
-                        disabled={destinations.length === 0}
-                        aria-label={`Destino del trabajador ${i + 1}`}
-                      >
-                        <option value="">
-                          {destinations.length === 0
-                            ? 'Primero agrega destinos'
-                            : '— Destino —'}
-                        </option>
-                        {destinations.map((d) => (
-                          <option key={d} value={d}>
-                            {up(d)}
+                {rows.map((r, i) => {
+                  const found = findByDni(r.dni)
+                  const searching = rosterState === 'loading' && !!r.dni.trim()
+                  return (
+                    <div key={i} className="ft-row sol-row">
+                      <span className="ft-seq">{i + 1}</span>
+                      <div className="sol-fields">
+                        {/* La CÉDULA manda: busca al trabajador en la nómina */}
+                        <input
+                          value={r.dni}
+                          onChange={(e) => onDniChange(i, e.target.value)}
+                          onFocus={() => {
+                            if (rosterState === 'idle') void loadRoster()
+                          }}
+                          placeholder="Cédula *"
+                          inputMode="numeric"
+                          aria-label={`Cédula del trabajador ${i + 1}`}
+                        />
+                        <input
+                          value={r.full_name}
+                          onChange={(e) => updateRow(i, { full_name: e.target.value })}
+                          readOnly={!!found}
+                          placeholder={
+                            searching ? 'Buscando en la nómina…' : 'Nombre completo *'
+                          }
+                          aria-label={`Nombre del trabajador ${i + 1}`}
+                        />
+                        <select
+                          value={r.destination}
+                          onChange={(e) => updateRow(i, { destination: e.target.value })}
+                          disabled={destinations.length === 0}
+                          aria-label={`Destino del trabajador ${i + 1}`}
+                        >
+                          <option value="">
+                            {destinations.length === 0
+                              ? 'Primero agrega destinos'
+                              : '— Destino —'}
                           </option>
-                        ))}
-                      </select>
+                          {destinations.map((d) => (
+                            <option key={d} value={d}>
+                              {up(d)}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Estado de la búsqueda por cédula */}
+                        {found ? (
+                          <span className="sol-hint sol-hint-ok">
+                            <CircleCheck size={12} />
+                            {up(employeeFullName(found))}
+                            {found.department_name ? ` · ${up(found.department_name)}` : ''}
+                          </span>
+                        ) : searching ? (
+                          <span className="sol-hint">Buscando en la nómina…</span>
+                        ) : rosterState === 'error' && r.dni.trim() ? (
+                          <span className="sol-hint sol-hint-warn">{rosterError}</span>
+                        ) : rosterState === 'ready' && r.dni.trim() ? (
+                          <span className="sol-hint sol-hint-warn">
+                            Cédula no encontrada en la nómina: escribe el nombre.
+                          </span>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => removeRow(i)}
+                        aria-label={`Quitar trabajador ${i + 1}`}
+                        disabled={rows.length === 1}
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger"
-                      onClick={() => removeRow(i)}
-                      aria-label={`Quitar trabajador ${i + 1}`}
-                      disabled={rows.length === 1}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               <button type="button" className="btn sol-add" onClick={addRow}>
                 <Plus size={14} /> Agregar trabajador

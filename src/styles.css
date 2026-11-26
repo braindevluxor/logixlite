@@ -2019,6 +2019,32 @@ textarea {
   margin-top: 0.5rem;
 }
 
+/* Estado de la búsqueda de la cédula en la nómina */
+.sol-hint {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sol-hint-ok {
+  color: var(--ok);
+}
+
+.sol-hint-warn {
+  color: var(--warn);
+}
+
+/* Nombre tomado de la nómina: solo lectura */
+.sol-fields input[readonly] {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+}
+
 /* ===== Bandeja de solicitudes (pantalla Viajes) ===== */
 .sol-admin {
   background: var(--surface);
