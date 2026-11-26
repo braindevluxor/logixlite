@@ -230,6 +230,10 @@ as $$
 declare
   v_trip_id bigint;
   v_name    text;
+  v_id      bigint;
+  v_dni     text;
+  v_phone   text;
+  v_seq     integer;
 begin
   select ft.id into v_trip_id
     from public.free_trips ft
@@ -247,22 +251,26 @@ begin
     raise exception 'Indica el nombre del pasajero' using errcode = '22023';
   end if;
 
-  return (with ins as (
-    insert into public.free_trip_passengers
-      (free_trip_id, full_name, dni, phone, seq)
-    values (
-      v_trip_id,
-      v_name,
-      nullif(btrim(coalesce(p_dni,   '')), ''),
-      nullif(btrim(coalesce(p_phone, '')), ''),
-      coalesce((select max(seq) from public.free_trip_passengers
-                 where free_trip_id = v_trip_id), 0) + 1
-    )
-    returning id, full_name, dni, phone, seq
+  -- INSERT ... RETURNING ... INTO: un CTE con INSERT debe estar
+  -- en el nivel superior de la sentencia (no dentro de otra
+  -- subconsulta), por eso no se usa "with ins as (insert ...)"
+  insert into public.free_trip_passengers
+    (free_trip_id, full_name, dni, phone, seq)
+  values (
+    v_trip_id,
+    v_name,
+    nullif(btrim(coalesce(p_dni,   '')), ''),
+    nullif(btrim(coalesce(p_phone, '')), ''),
+    coalesce((select max(seq) from public.free_trip_passengers
+               where free_trip_id = v_trip_id), 0) + 1
   )
-  select jsonb_build_object(
-    'id', id, 'full_name', full_name, 'dni', dni, 'phone', phone, 'seq', seq
-  ) from ins);
+  returning id, full_name, dni, phone, seq
+  into v_id, v_name, v_dni, v_phone, v_seq;
+
+  return jsonb_build_object(
+    'id', v_id, 'full_name', v_name, 'dni', v_dni,
+    'phone', v_phone, 'seq', v_seq
+  );
 end;
 $$;
 
@@ -308,6 +316,10 @@ as $$
 declare
   v_trip_id bigint;
   v_name    text;
+  v_id      bigint;
+  v_note    text;
+  v_arrived timestamptz;
+  v_seq     integer;
 begin
   select ft.id into v_trip_id
     from public.free_trips ft
@@ -325,22 +337,25 @@ begin
     raise exception 'Indica la parada' using errcode = '22023';
   end if;
 
-  return (with ins as (
-    insert into public.free_trip_stops
-      (free_trip_id, name, note, seq)
-    values (
-      v_trip_id,
-      v_name,
-      nullif(btrim(coalesce(p_note, '')), ''),
-      coalesce((select max(seq) from public.free_trip_stops
-                 where free_trip_id = v_trip_id), 0) + 1
-    )
-    returning id, name, note, arrived_at, seq
+  -- INSERT ... RETURNING ... INTO: un CTE con INSERT debe estar
+  -- en el nivel superior de la sentencia (no dentro de otra
+  -- subconsulta), por eso no se usa "with ins as (insert ...)"
+  insert into public.free_trip_stops
+    (free_trip_id, name, note, seq)
+  values (
+    v_trip_id,
+    v_name,
+    nullif(btrim(coalesce(p_note, '')), ''),
+    coalesce((select max(seq) from public.free_trip_stops
+               where free_trip_id = v_trip_id), 0) + 1
   )
-  select jsonb_build_object(
-    'id', id, 'name', name, 'note', note,
-    'arrived_at', arrived_at, 'seq', seq
-  ) from ins);
+  returning id, name, note, arrived_at, seq
+  into v_id, v_name, v_note, v_arrived, v_seq;
+
+  return jsonb_build_object(
+    'id', v_id, 'name', v_name, 'note', v_note,
+    'arrived_at', v_arrived, 'seq', v_seq
+  );
 end;
 $$;
 
