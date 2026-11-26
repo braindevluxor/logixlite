@@ -4,6 +4,7 @@ import { BookOpen, CalendarClock, ChevronRight, CircleCheck, Play } from 'lucide
 import { supabase } from '../lib/supabase'
 import { initials } from '../lib/format'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
+import InstallAppButton from '../components/InstallAppButton'
 import type { DriverLinkData } from '../lib/types'
 
 /** Pasos del tour interactivo del menu del chofer */
@@ -116,13 +117,16 @@ export default function DriverHome() {
           />
           LOGIXLITE
         </span>
-        <button
-          type="button"
-          className="btn-tutorial"
-          onClick={() => setShowTut(true)}
-        >
-          <BookOpen size={14} /> Tutorial
-        </button>
+        <div className="row gap-sm">
+          <InstallAppButton />
+          <button
+            type="button"
+            className="btn-tutorial"
+            onClick={() => setShowTut(true)}
+          >
+            <BookOpen size={14} /> Tutorial
+          </button>
+        </div>
       </header>
 
       <main className="driver-main">

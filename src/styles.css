@@ -1807,6 +1807,31 @@ textarea {
   text-align: center;
 }
 
+/* Botón de instalación de la PWA (vistas del chofer) */
+.btn-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+
+.btn-install:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
 /* ===== Calificacion del viaje (/calificar/:token) ===== */
 .stars {
   display: inline-flex;

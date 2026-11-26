@@ -12,6 +12,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
+import InstallAppButton from '../components/InstallAppButton'
 import type { DriverLinkData, TripStatus } from '../lib/types'
 
 const STATUS_LABEL: Record<TripStatus, string> = {
@@ -125,6 +126,7 @@ export default function DriverTrips() {
           LOGIXLITE
         </span>
         <div className="row gap-sm">
+          <InstallAppButton />
           <button
             type="button"
             className="btn-tutorial"

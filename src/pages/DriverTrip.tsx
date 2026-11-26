@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
+import InstallAppButton from '../components/InstallAppButton'
 import MapModal, { type MapPoint } from '../components/MapModal'
 import type {
   SharedTrip,
@@ -452,16 +453,19 @@ export default function DriverTrip() {
           />
           LOGIXLITE
         </span>
-        <span className={`badge badge-${trip.status}`} data-tour="status">
-          {STATUS_LABEL[trip.status]}
-        </span>
-        <button
-          type="button"
-          className="btn-tutorial"
-          onClick={() => setShowTut(true)}
-        >
-          <BookOpen size={14} /> Tutorial
-        </button>
+        <div className="row gap-sm">
+          <span className={`badge badge-${trip.status}`} data-tour="status">
+            {STATUS_LABEL[trip.status]}
+          </span>
+          <InstallAppButton />
+          <button
+            type="button"
+            className="btn-tutorial"
+            onClick={() => setShowTut(true)}
+          >
+            <BookOpen size={14} /> Tutorial
+          </button>
+        </div>
       </header>
 
       <main className="driver-main">

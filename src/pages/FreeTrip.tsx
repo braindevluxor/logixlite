@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
+import InstallAppButton from '../components/InstallAppButton'
 import type { ApiEmployee, DriverLinkData } from '../lib/types'
 
 function fmtDateTime(iso: string): string {
@@ -384,6 +385,7 @@ export default function FreeTrip() {
           LOGIXLITE
         </span>
         <div className="row gap-sm">
+          <InstallAppButton />
           <button
             type="button"
             className="btn-tutorial"
