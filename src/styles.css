@@ -1966,28 +1966,6 @@ textarea {
   margin-bottom: 0.4rem;
 }
 
-.sol-dest-add {
-  display: flex;
-  gap: 0.45rem;
-}
-
-.sol-dest-add input {
-  flex: 1;
-  min-width: 0;
-  font: inherit;
-  font-size: 0.88rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.sol-dest-add input:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
 .sol-fields {
   flex: 1;
   min-width: 0;

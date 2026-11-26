@@ -15,8 +15,6 @@ const EMPTY_ROW: SolicitudRow = { full_name: '', dni: '', destination: '' }
  * cédula y su destino. El admin la ve en Viajes.
  */
 export default function RideRequest() {
-  const [destinations, setDestinations] = useState<string[]>([])
-  const [destInput, setDestInput] = useState('')
   const [rows, setRows] = useState<SolicitudRow[]>([{ ...EMPTY_ROW }])
   const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
@@ -115,30 +113,6 @@ export default function RideRequest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosterState, roster])
 
-  // ---- Destinos del traslado ----
-  function addDestination() {
-    const name = destInput.trim().toUpperCase()
-    if (!name) return
-    if (destinations.some((d) => d.toLowerCase() === name.toLowerCase())) {
-      setError('Esa ubicación ya está en la lista.')
-      return
-    }
-    setError(null)
-    setDestinations((prev) => [...prev, name])
-    setDestInput('')
-    // Si es el primer destino, marcarlo como destino de la fila 1
-    setRows((prev) =>
-      prev.map((r, i) => (i === 0 && !r.destination ? { ...r, destination: name } : r))
-    )
-  }
-
-  function removeDestination(name: string) {
-    setDestinations((prev) => prev.filter((d) => d !== name))
-    setRows((prev) =>
-      prev.map((r) => (r.destination === name ? { ...r, destination: '' } : r))
-    )
-  }
-
   // ---- Trabajadores ----
   function updateRow(i: number, patch: Partial<SolicitudRow>) {
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)))
@@ -156,17 +130,13 @@ export default function RideRequest() {
     e.preventDefault()
     setError(null)
 
-    if (destinations.length === 0) {
-      return setError('Agrega al menos un destino del traslado.')
-    }
-
     const clean = rows
       .map((r) => ({
         full_name: r.full_name.trim(),
         dni: r.dni.trim(),
-        destination: r.destination,
+        destination: r.destination.trim(),
       }))
-      .filter((r) => r.full_name || r.dni)
+      .filter((r) => r.full_name || r.dni || r.destination)
 
     if (clean.length === 0) {
       return setError('Agrega al menos un trabajador.')
@@ -203,8 +173,6 @@ export default function RideRequest() {
   }
 
   function reset() {
-    setDestinations([])
-    setDestInput('')
     setRows([{ ...EMPTY_ROW }])
     setPhone('')
     setNotes('')
@@ -255,54 +223,7 @@ export default function RideRequest() {
             </div>
 
             <form onSubmit={onSubmit}>
-              {/* ---- Destinos ---- */}
-              <div className="assign-label">
-                <MapPin size={13} /> Destinos del traslado
-              </div>
-              <div className="sol-dest-add">
-                <input
-                  value={destInput}
-                  onChange={(e) => setDestInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      addDestination()
-                    }
-                  }}
-                  placeholder="EJ: TERMINAL VALENCIA"
-                  aria-label="Nueva ubicación"
-                />
-                <button type="button" className="btn" onClick={addDestination}>
-                  <Plus size={14} /> Agregar
-                </button>
-              </div>
-
-              {destinations.length === 0 ? (
-                <p className="muted small">
-                  Agrega las paradas del recorrido; cada trabajador eligirá la suya.
-                </p>
-              ) : (
-                <div className="ft-list">
-                  {destinations.map((d, i) => (
-                    <div key={d} className="ft-row">
-                      <span className="ft-seq">{i + 1}</span>
-                      <span className="grow">
-                        <strong>{up(d)}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-danger"
-                        onClick={() => removeDestination(d)}
-                        aria-label={`Quitar ${d}`}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ---- Trabajadores ---- */}
+              {/* ---- Trabajadores: cédula + nombre + destino en la misma fila ---- */}
               <div className="assign-label">Trabajadores</div>
               <div className="ft-list">
                 {rows.map((r, i) => {
@@ -332,23 +253,12 @@ export default function RideRequest() {
                           }
                           aria-label={`Nombre del trabajador ${i + 1}`}
                         />
-                        <select
+                        <input
                           value={r.destination}
                           onChange={(e) => updateRow(i, { destination: e.target.value })}
-                          disabled={destinations.length === 0}
+                          placeholder="Destino *"
                           aria-label={`Destino del trabajador ${i + 1}`}
-                        >
-                          <option value="">
-                            {destinations.length === 0
-                              ? 'Primero agrega destinos'
-                              : '— Destino —'}
-                          </option>
-                          {destinations.map((d) => (
-                            <option key={d} value={d}>
-                              {up(d)}
-                            </option>
-                          ))}
-                        </select>
+                        />
 
                         {/* Estado de la búsqueda por cédula */}
                         {found ? (
