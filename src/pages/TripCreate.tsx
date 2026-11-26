@@ -196,6 +196,7 @@ export default function TripCreate() {
           department: null,
           branch_id: null,
           manual: true,
+          phone: p.phone ?? null,
         }))
       )
     })()

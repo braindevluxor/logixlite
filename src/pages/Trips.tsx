@@ -121,7 +121,11 @@ export default function Trips() {
                         <div key={p.id} className="sol-pax-line">
                           <strong>{up(p.full_name)}</strong>
                           <span className="muted"> → {up(p.destination)}</span>
-                          <span className="muted small"> · C.I. {p.dni}</span>
+                          <span className="muted small">
+                            {' '}
+                            · C.I. {p.dni}
+                            {p.phone ? ` · ${p.phone}` : ''}
+                          </span>
                         </div>
                       ))}
                     </div>

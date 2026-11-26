@@ -16,7 +16,6 @@ const EMPTY_ROW: SolicitudRow = { full_name: '', dni: '', destination: '' }
  */
 export default function RideRequest() {
   const [rows, setRows] = useState<SolicitudRow[]>([{ ...EMPTY_ROW }])
-  const [phone, setPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,7 +82,7 @@ export default function RideRequest() {
     return roster.find((e) => String(e.dni) === d) ?? null
   }
 
-  /** Al escribir la cédula, completa el nombre desde la nómina */
+  /** Al escribir la cédula, completa nombre y teléfono desde la nómina */
   function onDniChange(i: number, value: string) {
     const found = roster ? roster.find((e) => String(e.dni) === value.trim()) : null
     setRows((prev) =>
@@ -92,7 +91,9 @@ export default function RideRequest() {
           ? {
               ...row,
               dni: value,
-              ...(found ? { full_name: employeeFullName(found) } : {}),
+              ...(found
+                ? { full_name: employeeFullName(found), phone: found.phone ?? null }
+                : { phone: null }),
             }
           : row
       )
@@ -100,14 +101,17 @@ export default function RideRequest() {
   }
 
   // Si la nómina carga después de escribir las cédulas, completa
-  // los nombres que ya estén en la lista
+  // los nombres y teléfonos que ya estén en la lista
   useEffect(() => {
     if (rosterState !== 'ready' || !roster) return
     setRows((prev) =>
       prev.map((row) => {
         const found = findByDni(row.dni)
-        const name = found ? employeeFullName(found) : row.full_name
-        return name === row.full_name ? row : { ...row, full_name: name }
+        if (!found) return row
+        const name = employeeFullName(found)
+        const phone = found.phone ?? null
+        if (name === row.full_name && phone === (row.phone ?? null)) return row
+        return { ...row, full_name: name, phone }
       })
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,6 +139,7 @@ export default function RideRequest() {
         full_name: r.full_name.trim(),
         dni: r.dni.trim(),
         destination: r.destination.trim(),
+        phone: (r.phone ?? '').trim() || null,
       }))
       .filter((r) => r.full_name || r.dni || r.destination)
 
@@ -152,7 +157,6 @@ export default function RideRequest() {
 
     setSaving(true)
     const { error: rpcErr } = await supabase.rpc('ride_request_submit', {
-      p_phone: phone.trim() || null,
       p_notes: notes.trim() || null,
       p_passengers: clean,
     })
@@ -174,7 +178,6 @@ export default function RideRequest() {
 
   function reset() {
     setRows([{ ...EMPTY_ROW }])
-    setPhone('')
     setNotes('')
     setError(null)
     setDone(false)
@@ -266,6 +269,7 @@ export default function RideRequest() {
                             <CircleCheck size={12} />
                             {up(employeeFullName(found))}
                             {found.department_name ? ` · ${up(found.department_name)}` : ''}
+                            {found.phone ? ` · ${found.phone}` : ''}
                           </span>
                         ) : searching ? (
                           <span className="sol-hint">Buscando en la nómina…</span>
@@ -295,15 +299,6 @@ export default function RideRequest() {
               </button>
 
               {/* ---- Contacto y comentario ---- */}
-              <label className="field">
-                <span>Teléfono de contacto (opcional)</span>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  inputMode="tel"
-                  placeholder="0412…"
-                />
-              </label>
               <label className="field">
                 <span>Comentario (opcional)</span>
                 <textarea

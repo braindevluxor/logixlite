@@ -9,6 +9,8 @@ export interface SolicitudRow {
   full_name: string
   dni: string
   destination: string
+  /** Teléfono que trae la nómina (API de trabajadores) */
+  phone?: string | null
 }
 
 /** Solicitud tal como la ve el admin (Viajes) */
@@ -23,5 +25,6 @@ export interface RideRequest {
     full_name: string
     dni: string
     destination: string
+    phone?: string | null
   }[]
 }

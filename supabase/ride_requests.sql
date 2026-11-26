@@ -30,8 +30,13 @@ create table if not exists public.ride_request_passengers (
   full_name   text not null,
   dni         text not null,
   destination text not null,
+  phone       text,
   created_at  timestamptz not null default now()
 );
+
+-- Compatibilidad con instalaciones que ya crearon la tabla
+alter table public.ride_request_passengers
+  add column if not exists phone text;
 
 create index if not exists idx_ride_requests_status
   on public.ride_requests (status, created_at desc);
@@ -91,12 +96,13 @@ begin
   )
   returning id into v_id;
 
-  insert into public.ride_request_passengers (request_id, full_name, dni, destination)
+  insert into public.ride_request_passengers (request_id, full_name, dni, destination, phone)
   select
     v_id,
     upper(btrim(x ->> 'full_name')),
     btrim(x ->> 'dni'),
-    upper(btrim(x ->> 'destination'))
+    upper(btrim(x ->> 'destination')),
+    nullif(btrim(coalesce(x ->> 'phone', '')), '')
   from jsonb_array_elements(p_passengers) x;
 
   return jsonb_build_object('ok', true, 'id', v_id);
