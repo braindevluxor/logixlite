@@ -8,6 +8,7 @@ import {
   Flag,
   Gauge,
   MapPin,
+  MessageCircle,
   Play,
   Send,
   TriangleExclamationPoint,
@@ -36,6 +37,24 @@ function fmtTime(iso: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+/**
+ * Convierte un teléfono venezolano al formato de WhatsApp:
+ * 04124362012 -> 584124362012 (sin +, sin espacios).
+ */
+function toIntlPhone(phone: string): string | null {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length < 8) return null
+  if (digits.startsWith('58')) return digits
+  if (digits.startsWith('0')) return '58' + digits.slice(1)
+  return digits
+}
+
+/** Chat de WhatsApp del pasajero (selector si no hay teléfono) */
+function waChatUrl(phone?: string | null): string {
+  const intl = phone ? toIntlPhone(phone) : null
+  return intl ? `https://wa.me/${intl}` : 'https://wa.me/'
 }
 
 interface GeoState {
@@ -665,6 +684,21 @@ export default function DriverTrip() {
                           )}
                         </div>
                         <div className="pass-actions">
+                          {/* WhatsApp directo al pasajero */}
+                          <a
+                            className="btn btn-sm btn-whatsapp"
+                            href={waChatUrl(passenger!.phone)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={
+                              passenger!.phone
+                                ? `WhatsApp de ${passenger!.full_name}`
+                                : 'Abrir WhatsApp (sin teléfono: elige el contacto)'
+                            }
+                            aria-label={`WhatsApp de ${passenger!.full_name}`}
+                          >
+                            <MessageCircle size={14} />
+                          </a>
                           <button
                             className="btn btn-sm btn-novedad"
                             data-tour="novedad"

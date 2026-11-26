@@ -171,7 +171,13 @@ export interface SharedTrip {
   driver: Driver | null
   passengers: Pick<
     TripPassenger,
-    'id' | 'dni' | 'full_name' | 'role_name' | 'department' | 'origin_destination_id'
+    | 'id'
+    | 'dni'
+    | 'full_name'
+    | 'role_name'
+    | 'department'
+    | 'origin_destination_id'
+    | 'phone'
   >[]
   destinations: TripDestination[]
   links: TripPassengerDestination[]
