@@ -68,7 +68,15 @@ export function useInstallApp() {
             '2) Elige "Agregar a pantalla de inicio"\n' +
             '3) Confirma con "Agregar"'
         )
+        return
       }
+      // Navegador sin soporte del prompt (o en desarrollo, sin
+      // service worker): se dan las instrucciones manuales
+      window.alert(
+        'Este navegador no ofrece la instalación automática.\n\n' +
+          '• Chrome / Edge (escritorio o Android): menú ⋮ → "Instalar LOGIXLITE" o "Añadir a pantalla de inicio".\n' +
+          '• Safari (iPhone/iPad): Compartir → "Agregar a pantalla de inicio".'
+      )
       return
     }
 

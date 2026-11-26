@@ -3,13 +3,15 @@ import { useInstallApp } from '../pwa/install'
 
 /**
  * Botón "Instalar app" para las vistas públicas del chofer.
- * Se oculta si la app ya está instalada o si el navegador no
- * ofrece forma de instalarla (en iOS muestra instrucciones).
+ * Siempre visible, salvo que la app ya esté instalada:
+ *  - Chrome/Edge/Android: abre el prompt nativo de instalación
+ *  - iOS: instrucciones de "Agregar a pantalla de inicio"
+ *  - Otros (o sin service worker): instrucciones manuales
  */
 export default function InstallAppButton() {
-  const { available, installed, install, isIOS } = useInstallApp()
+  const { installed, install } = useInstallApp()
 
-  if (installed || (!available && !isIOS)) return null
+  if (installed) return null
 
   return (
     <button
