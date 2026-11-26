@@ -25,9 +25,10 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
      `public_branches.sql` (nómina en el viaje libre), `trip_rating.sql`
      (calificación del viaje con link único por pasajero),
      `trip_passenger_cancel.sql` (cancelar/sustituir pasajeros),
-     `location_maps.sql` (enlace de Google Maps por ubicación) y
+     `location_maps.sql` (enlace de Google Maps por ubicación),
      `locations_dedup.sql` (quita ubicaciones duplicadas por mayúsculas
-     y las pasa a mayúsculas).
+     y las pasa a mayúsculas) y `ride_requests.sql`
+     (solicitudes de traslado desde el link público /solicitud).
 3. En **Authentication → Providers → Email**, desactiva "Confirm email" si quieres altas de usuario inmediatas.
 4. En **Authentication → Users → Add user**, crea tu usuario y contraseña.
 5. En **Project Settings → API**, copia la **Project URL** y la **anon key**.
@@ -61,6 +62,7 @@ VITE_TALENTO_HUMANO_KEY=PBDFeysVkGLa0zRfq5bYEUtNbmV0akhtN3hFakRES3E2cU82TVE9PQ==
 | **Viajes** | Asistente de 4 pasos: vehículo + chofer → pasajeros (API por sucursal, con cupo) → destinos con orden → confirmar |
 | **Detalle del viaje** | Cambiar estado (programado → en curso → finalizado/cancelado), ver pasajeros y destinos |
 | **Combustible** | Registro de cargas por vehículo: Gasolina (**Lts**) o GNV (**Vol**), estación, fecha/hora, monto en Bs con conversión a **$** usando la tasa BCV del día, y pago **Electrónico** (referencia) o **Efectivo** (N° de recibo de Logística). Historial filtrable + totales |
+| **Solicitud de traslado** | Link público **`/solicitud`** (sin login): origen fijo **CENTRAL LUXOR**, trabajadores con cédula y destino. Llega a **Viajes** como solicitud pendiente y se convierte en viaje con un clic |
 
 ### API de pasajeros
 

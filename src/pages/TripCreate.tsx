@@ -17,6 +17,7 @@ import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { up } from '../lib/format'
 import RouteMap, { checkPointValue } from '../components/RouteMap'
 import PointInput from '../components/PointInput'
+import { SOLICITUD_ORIGEN, type SolicitudRow } from '../lib/rideRequest'
 import type {
   ApiEmployee,
   Branch,
@@ -121,6 +122,8 @@ export default function TripCreate() {
   const [passengerObs, setPassengerObs] = useState<Record<string, string>>({})
   // Dropdown de ubicaciones abierto (por pasajero)
   const [openDestMenu, setOpenDestMenu] = useState<string | null>(null)
+  // Solicitud de traslado que originó este viaje (?solicitud=ID)
+  const [solicitudId, setSolicitudId] = useState<number | null>(null)
 
   const vehicle = vehicles.find((v) => v.id === vehicleId) ?? null
   const capacity = vehicle?.capacity ?? 0
@@ -134,6 +137,71 @@ export default function TripCreate() {
       const hh = String(now.getHours()).padStart(2, '0')
       const mm = String(now.getMinutes()).padStart(2, '0')
       setDepartureAt(`${d}T${hh}:${mm}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
+   * Solicitud de traslado (?solicitud=ID): precarga el origen
+   * fijo (CENTRAL LUXOR), los destinos pedidos y los
+   * trabajadores. Solo aplica a viajes nuevos.
+   */
+  useEffect(() => {
+    if (isEdit) return
+    const raw = searchParams.get('solicitud')
+    const id = raw ? Number(raw) : 0
+    if (!id) return
+
+    let alive = true
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('ride_requests')
+        .select('id, ride_request_passengers(full_name, dni, destination)')
+        .eq('id', id)
+        .eq('status', 'pendiente')
+        .maybeSingle()
+      if (!alive || error || !data) return
+
+      const pax =
+        (data as unknown as { ride_request_passengers: SolicitudRow[] })
+          .ride_request_passengers ?? []
+      if (pax.length === 0) return
+
+      // Destinos: el origen fijo primero y luego los pedidos (sin repetir)
+      const wanted = [SOLICITUD_ORIGEN]
+      for (const p of pax) {
+        const name = p.destination.trim().toUpperCase()
+        if (name && !wanted.some((w) => w.toLowerCase() === name.toLowerCase())) {
+          wanted.push(name)
+        }
+      }
+
+      setSolicitudId(id)
+      setDestinations(
+        wanted.map((name, i) => ({
+          id: -(Date.now() + i),
+          trip_id: 0,
+          position: i + 1,
+          name,
+          notes: null,
+        }))
+      )
+      // Origen de todos los trabajadores: CENTRAL LUXOR (posición 1)
+      setPassengerOrigins(Object.fromEntries(pax.map((p) => [p.dni, 1])))
+      setSelected(
+        pax.map((p) => ({
+          dni: p.dni,
+          full_name: p.full_name,
+          role_name: null,
+          department: null,
+          branch_id: null,
+          manual: true,
+        }))
+      )
+    })()
+
+    return () => {
+      alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -902,6 +970,18 @@ export default function TripCreate() {
       }
 
       tripId = trip.id as number
+
+      // Si venimos de una solicitud de traslado, marcarla como
+      // atendida (mejor esfuerzo; no bloquea la creación)
+      if (solicitudId) {
+        supabase
+          .from('ride_requests')
+          .update({ status: 'atendida' })
+          .eq('id', solicitudId)
+          .then(({ error: solErr }) => {
+            if (solErr) console.warn('Solicitud no marcada:', solErr.message)
+          })
+      }
     }
 
     // 1) Destinos PRIMERO (los pasajeros referencian su origen)

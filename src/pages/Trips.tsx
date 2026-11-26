@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Inbox, Plus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
+import { SOLICITUD_ORIGEN, type RideRequest } from '../lib/rideRequest'
 import type { Branch, Driver, Trip, Vehicle } from '../lib/types'
 
 interface TripRow extends Trip {
@@ -18,10 +20,37 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function Trips() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState<TripRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'todos' | 'activos' | 'finalizados'>('activos')
+
+  // ---- Solicitudes de traslado (link público /solicitud) ----
+  const [solicitudes, setSolicitudes] = useState<RideRequest[]>([])
+
+  async function loadSolicitudes() {
+    const { data, error: err } = await supabase
+      .from('ride_requests')
+      .select('*, ride_request_passengers(*)')
+      .eq('status', 'pendiente')
+      .order('created_at', { ascending: false })
+    // Si el SQL no está ejecutado, la lista queda vacía sin romper
+    setSolicitudes(err ? [] : ((data as unknown as RideRequest[]) ?? []))
+  }
+
+  async function resolveSolicitud(id: number, status: 'atendida' | 'cancelada') {
+    if (status === 'cancelada' && !confirm('¿Descartar esta solicitud?')) return
+    const { error: err } = await supabase
+      .from('ride_requests')
+      .update({ status })
+      .eq('id', id)
+    if (err) {
+      setError(err.message)
+      return
+    }
+    setSolicitudes((prev) => prev.filter((s) => s.id !== id))
+  }
 
   useEffect(() => {
     async function load() {
@@ -45,6 +74,7 @@ export default function Trips() {
       setLoading(false)
     }
     load()
+    loadSolicitudes()
   }, [])
 
   const filtered = rows.filter((r) => {
@@ -61,6 +91,63 @@ export default function Trips() {
           <Plus size={15} /> Nuevo
         </Link>
       </div>
+
+      {/* ---- Solicitudes de traslado (link público) ---- */}
+      {solicitudes.length > 0 && (
+        <section className="sol-admin">
+          <div className="sol-admin-head">
+            <h2>
+              <Inbox size={16} /> Solicitudes de traslado ({solicitudes.length})
+            </h2>
+          </div>
+          <p className="muted small">
+            Pedidos del link público <code>/solicitud</code> · origen fijo{' '}
+            <strong>{SOLICITUD_ORIGEN}</strong>
+          </p>
+          <ul className="list">
+            {solicitudes.map((s) => (
+              <li key={s.id}>
+                <div className="list-item sol-admin-row">
+                  <div className="sol-admin-main">
+                    <div className="muted small">
+                      {new Date(s.created_at).toLocaleString('es-VE', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                      {s.contact_phone ? ` · ${s.contact_phone}` : ''}
+                    </div>
+                    <div className="sol-pax">
+                      {s.ride_request_passengers.map((p) => (
+                        <div key={p.id} className="sol-pax-line">
+                          <strong>{up(p.full_name)}</strong>
+                          <span className="muted"> → {up(p.destination)}</span>
+                          <span className="muted small"> · C.I. {p.dni}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {s.notes && <div className="obs-note">Obs: {s.notes}</div>}
+                  </div>
+                  <div className="row gap-sm wrap">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => navigate(`/viajes/nuevo?solicitud=${s.id}`)}
+                    >
+                      <Plus size={13} /> Crear viaje
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => resolveSolicitud(s.id, 'cancelada')}
+                      aria-label="Descartar solicitud"
+                    >
+                      <X size={13} /> Descartar
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="seg">
         {(

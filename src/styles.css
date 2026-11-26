@@ -1952,6 +1952,110 @@ textarea {
   text-align: left;
 }
 
+/* ===== Solicitud de traslado (link público /solicitud) ===== */
+.sol-origen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: var(--primary);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.sol-dest-add {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.sol-dest-add input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sol-dest-add input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.sol-fields {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.4rem;
+}
+
+.sol-fields input,
+.sol-fields select {
+  min-width: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sol-fields input:focus,
+.sol-fields select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.sol-add {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+/* ===== Bandeja de solicitudes (pantalla Viajes) ===== */
+.sol-admin {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.sol-admin-head h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.02rem;
+}
+
+.sol-admin-row {
+  align-items: flex-start;
+}
+
+.sol-admin-main {
+  min-width: 0;
+}
+
+.sol-pax {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sol-pax-line {
+  font-size: 0.88rem;
+}
+
 /* ===== Menu publico del chofer (/chofer/:token) ===== */
 
 /* Saludo: tarjeta con degradado azul */

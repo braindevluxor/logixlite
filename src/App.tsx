@@ -42,6 +42,7 @@ import DriverHome from './pages/DriverHome'
 import DriverTrips from './pages/DriverTrips'
 import FreeTrip from './pages/FreeTrip'
 import RateTrip from './pages/RateTrip'
+import RideRequest from './pages/RideRequest'
 
 /**
  * Items del menu: se renderizan en la barra LATERAL (escritorio,
@@ -251,6 +252,9 @@ export default function App() {
 
       {/* Calificacion del viaje: link publico unico por pasajero */}
       <Route path="/calificar/:token" element={<RateTrip />} />
+
+      {/* Solicitud de traslado (publico, origen fijo CENTRAL LUXOR) */}
+      <Route path="/solicitud" element={<RideRequest />} />
 
       <Route path="/login" element={<Login />} />
       <Route

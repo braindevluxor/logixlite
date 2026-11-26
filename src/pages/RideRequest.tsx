@@ -1,0 +1,302 @@
+import { useState, type FormEvent } from 'react'
+import { MapPin, Plus, Send, X } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { up } from '../lib/format'
+import { SOLICITUD_ORIGEN, type SolicitudRow } from '../lib/rideRequest'
+
+const EMPTY_ROW: SolicitudRow = { full_name: '', dni: '', destination: '' }
+
+/**
+ * Solicitud de traslado PÚBLICA (sin login):
+ *   /solicitud
+ * Origen fijo CENTRAL LUXOR; se agregan trabajadores con su
+ * cédula y su destino. El admin la ve en Viajes.
+ */
+export default function RideRequest() {
+  const [destinations, setDestinations] = useState<string[]>([])
+  const [destInput, setDestInput] = useState('')
+  const [rows, setRows] = useState<SolicitudRow[]>([{ ...EMPTY_ROW }])
+  const [phone, setPhone] = useState('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+  const [sentCount, setSentCount] = useState(0)
+
+  // ---- Destinos del traslado ----
+  function addDestination() {
+    const name = destInput.trim().toUpperCase()
+    if (!name) return
+    if (destinations.some((d) => d.toLowerCase() === name.toLowerCase())) {
+      setError('Esa ubicación ya está en la lista.')
+      return
+    }
+    setError(null)
+    setDestinations((prev) => [...prev, name])
+    setDestInput('')
+    // Si es el primer destino, marcarlo como destino de la fila 1
+    setRows((prev) =>
+      prev.map((r, i) => (i === 0 && !r.destination ? { ...r, destination: name } : r))
+    )
+  }
+
+  function removeDestination(name: string) {
+    setDestinations((prev) => prev.filter((d) => d !== name))
+    setRows((prev) =>
+      prev.map((r) => (r.destination === name ? { ...r, destination: '' } : r))
+    )
+  }
+
+  // ---- Trabajadores ----
+  function updateRow(i: number, patch: Partial<SolicitudRow>) {
+    setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  }
+
+  function addRow() {
+    setRows((prev) => [...prev, { ...EMPTY_ROW }])
+  }
+
+  function removeRow(i: number) {
+    setRows((prev) => (prev.length > 1 ? prev.filter((_, j) => j !== i) : prev))
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (destinations.length === 0) {
+      return setError('Agrega al menos un destino del traslado.')
+    }
+
+    const clean = rows
+      .map((r) => ({
+        full_name: r.full_name.trim(),
+        dni: r.dni.trim(),
+        destination: r.destination,
+      }))
+      .filter((r) => r.full_name || r.dni)
+
+    if (clean.length === 0) {
+      return setError('Agrega al menos un trabajador.')
+    }
+    if (clean.some((r) => !r.full_name || !r.dni || !r.destination)) {
+      return setError('Cada trabajador necesita nombre, cédula y destino.')
+    }
+    const seen = new Set<string>()
+    for (const r of clean) {
+      if (seen.has(r.dni)) return setError(`La cédula ${r.dni} está repetida.`)
+      seen.add(r.dni)
+    }
+
+    setSaving(true)
+    const { error: rpcErr } = await supabase.rpc('ride_request_submit', {
+      p_phone: phone.trim() || null,
+      p_notes: notes.trim() || null,
+      p_passengers: clean,
+    })
+    setSaving(false)
+
+    if (rpcErr) {
+      setError(
+        rpcErr.message.includes('ride_request_submit')
+          ? 'Falta el SQL de solicitudes: ejecuta supabase/ride_requests.sql en Supabase y recarga.'
+          : rpcErr.message
+      )
+      return
+    }
+
+    setDone(true)
+    setSentCount(clean.length)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function reset() {
+    setDestinations([])
+    setDestInput('')
+    setRows([{ ...EMPTY_ROW }])
+    setPhone('')
+    setNotes('')
+    setError(null)
+    setDone(false)
+    setSentCount(0)
+  }
+
+  return (
+    <div className="driver-page">
+      <header className="topbar">
+        <span className="brand">
+          <img
+            src="/logo-white.webp"
+            alt="LOGIXLITE"
+            className="brand-logo brand-logo-white"
+          />
+          LOGIXLITE
+        </span>
+      </header>
+
+      <main className="driver-main">
+        {done ? (
+          <div className="driver-card rate-thanks">
+            <span className="rate-ok">
+              <Send size={30} />
+            </span>
+            <h2>Solicitud enviada</h2>
+            <p className="muted">
+              Recibimos la solicitud de {sentCount}{' '}
+              {sentCount === 1 ? 'trabajador' : 'trabajadores'}. La oficina la revisará
+              y confirmará el traslado.
+            </p>
+            <button type="button" className="btn btn-primary btn-block" onClick={reset}>
+              Enviar otra solicitud
+            </button>
+          </div>
+        ) : (
+          <div className="driver-card">
+            <h2 style={{ marginTop: 0 }}>Solicitud de traslado</h2>
+            <p className="muted small">
+              Indica quiénes viajan y a dónde se bajan. La oficina revisará tu solicitud.
+            </p>
+
+            {/* Origen fijo */}
+            <div className="sol-origen">
+              <MapPin size={16} /> Origen: {SOLICITUD_ORIGEN}
+            </div>
+
+            <form onSubmit={onSubmit}>
+              {/* ---- Destinos ---- */}
+              <div className="assign-label">
+                <MapPin size={13} /> Destinos del traslado
+              </div>
+              <div className="sol-dest-add">
+                <input
+                  value={destInput}
+                  onChange={(e) => setDestInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addDestination()
+                    }
+                  }}
+                  placeholder="EJ: TERMINAL VALENCIA"
+                  aria-label="Nueva ubicación"
+                />
+                <button type="button" className="btn" onClick={addDestination}>
+                  <Plus size={14} /> Agregar
+                </button>
+              </div>
+
+              {destinations.length === 0 ? (
+                <p className="muted small">
+                  Agrega las paradas del recorrido; cada trabajador eligirá la suya.
+                </p>
+              ) : (
+                <div className="ft-list">
+                  {destinations.map((d, i) => (
+                    <div key={d} className="ft-row">
+                      <span className="ft-seq">{i + 1}</span>
+                      <span className="grow">
+                        <strong>{up(d)}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => removeDestination(d)}
+                        aria-label={`Quitar ${d}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ---- Trabajadores ---- */}
+              <div className="assign-label">Trabajadores</div>
+              <div className="ft-list">
+                {rows.map((r, i) => (
+                  <div key={i} className="ft-row sol-row">
+                    <span className="ft-seq">{i + 1}</span>
+                    <div className="sol-fields">
+                      <input
+                        value={r.full_name}
+                        onChange={(e) => updateRow(i, { full_name: e.target.value })}
+                        placeholder="Nombre completo *"
+                        aria-label={`Nombre del trabajador ${i + 1}`}
+                      />
+                      <input
+                        value={r.dni}
+                        onChange={(e) => updateRow(i, { dni: e.target.value })}
+                        placeholder="Cédula *"
+                        inputMode="numeric"
+                        aria-label={`Cédula del trabajador ${i + 1}`}
+                      />
+                      <select
+                        value={r.destination}
+                        onChange={(e) => updateRow(i, { destination: e.target.value })}
+                        disabled={destinations.length === 0}
+                        aria-label={`Destino del trabajador ${i + 1}`}
+                      >
+                        <option value="">
+                          {destinations.length === 0
+                            ? 'Primero agrega destinos'
+                            : '— Destino —'}
+                        </option>
+                        {destinations.map((d) => (
+                          <option key={d} value={d}>
+                            {up(d)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger"
+                      onClick={() => removeRow(i)}
+                      aria-label={`Quitar trabajador ${i + 1}`}
+                      disabled={rows.length === 1}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="btn sol-add" onClick={addRow}>
+                <Plus size={14} /> Agregar trabajador
+              </button>
+
+              {/* ---- Contacto y comentario ---- */}
+              <label className="field">
+                <span>Teléfono de contacto (opcional)</span>
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder="0412…"
+                />
+              </label>
+              <label className="field">
+                <span>Comentario (opcional)</span>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Algo que debamos saber…"
+                />
+              </label>
+
+              {error && <div className="alert alert-error">{error}</div>}
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-block"
+                disabled={saving}
+              >
+                <Send size={16} /> {saving ? 'Enviando…' : 'Enviar solicitud'}
+              </button>
+            </form>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
