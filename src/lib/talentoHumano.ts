@@ -24,11 +24,17 @@ const BASE =
 
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-const API_KEY =
-  (import.meta.env.VITE_TALENTO_HUMANO_KEY as string) ||
-  'PBDFeysVkGLa0zRfq5bYEUtNbmV0akhtN3hFakRES3E2cU82TVE9PQ=='
+/**
+ * Nota de seguridad: aquí NO se usa ninguna clave de la API de
+ * Talento Humano. Las llamadas pasan por el proxy de Vite (en
+ * desarrollo) o por la Edge Function talento-employees (en
+ * producción), donde la clave vive en el servidor / en los
+ * secretos de Supabase. Cualquier variable VITE_* queda
+ * embebida en el bundle del navegador, por eso no se referencia
+ * ninguna aquí.
+ */
 
-/** Construye los headers según el destino (proxy local, Edge Function o directo). */
+/** Construye los headers según el destino (proxy local o Edge Function). */
 function buildHeaders(): Record<string, string> {
   if (BASE.includes('/functions/v1/')) {
     // Edge Function de Supabase: se autentica con la anon key
@@ -37,12 +43,8 @@ function buildHeaders(): Record<string, string> {
       'Content-Type': 'application/json',
     }
   }
-  if (BASE.startsWith('/')) {
-    // Proxy local: la clave la agrega el servidor de Vite
-    return {}
-  }
-  // Llamada directa a la API (requiere que la API permita el header por CORS)
-  return { API_KEY }
+  // Proxy local: la clave la agrega el servidor de Vite
+  return {}
 }
 
 /**
