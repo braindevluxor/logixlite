@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { initials, up } from '../lib/format'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
+import { deptName } from '../lib/departments'
 import SpotlightTour, { type TourStep } from '../components/SpotlightTour'
 import InstallAppButton from '../components/InstallAppButton'
 import type { ApiEmployee, DriverLinkData } from '../lib/types'
@@ -557,7 +558,9 @@ export default function FreeTrip() {
                           <span className="muted small">
                             C.I. {dni}
                             {e.role_name ? ` · ${up(e.role_name)}` : ''}
-                            {e.department_name ? ` · ${up(e.department_name)}` : ''}
+                            {deptName(e.department_name)
+                              ? ` · ${up(deptName(e.department_name))}`
+                              : ''}
                           </span>
                         </span>
                         <button

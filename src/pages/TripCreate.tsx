@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import { up } from '../lib/format'
+import { deptName } from '../lib/departments'
 import RouteMap, { checkPointValue } from '../components/RouteMap'
 import PointInput from '../components/PointInput'
 import { SOLICITUD_ORIGEN, type SolicitudRow } from '../lib/rideRequest'
@@ -350,7 +351,7 @@ export default function TripCreate() {
           dni: x.dni,
           full_name: x.full_name,
           role_name: x.role_name,
-          department: x.department,
+          department: deptName(x.department) || null,
           branch_id: x.branch_id,
           observation: x.observation,
           phone: x.phone,
@@ -485,7 +486,7 @@ export default function TripCreate() {
           dni,
           full_name: employeeFullName(e),
           role_name: e.role_name || null,
-          department: e.department_name || null,
+          department: deptName(e.department_name) || null,
           branch_id: e.branch_id,
           phone: e.phone || null,
         },
@@ -1018,7 +1019,7 @@ export default function TripCreate() {
           dni: p.dni,
           full_name: p.full_name.toUpperCase(),
           role_name: p.role_name,
-          department: p.department,
+          department: deptName(p.department) || null,
           branch_id: p.branch_id,
           phone: p.phone ?? null,
           origin_destination_id:
@@ -1048,7 +1049,7 @@ export default function TripCreate() {
             dni: c.dni,
             full_name: c.full_name.toUpperCase(),
             role_name: c.role_name,
-            department: c.department,
+            department: deptName(c.department) || null,
             branch_id: c.branch_id,
             phone: c.phone ?? null,
             observation: c.observation ?? null,
@@ -1496,7 +1497,8 @@ export default function TripCreate() {
                             {p.role_name ? ` · ${p.role_name}` : ''}
                           </span>
                           <span className="muted small block">
-                            {p.department ?? (p.manual ? 'Pasajero manual' : '—')}
+                            {deptName(p.department) ||
+                              (p.manual ? 'Pasajero manual' : '—')}
                             {p.manual ? (
                               <em className="badge badge-manual"> manual</em>
                             ) : (

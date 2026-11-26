@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { deptName } from '../lib/departments'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
 import Stars from '../components/Stars'
 import MapModal, { type MapPoint } from '../components/MapModal'
@@ -504,7 +505,7 @@ export default function TripDetail() {
         dni: newP.dni,
         full_name: newP.full_name.trim().toUpperCase(),
         role_name: newP.role_name ?? null,
-        department: newP.department ?? null,
+        department: deptName(newP.department) || null,
         branch_id: newP.branch_id ?? null,
         phone: newP.phone ?? null,
         origin_destination_id: repPass.origin_destination_id ?? null,
@@ -786,7 +787,9 @@ export default function TripDetail() {
                       C.I. {p.dni}
                       {p.role_name ? ` · ${p.role_name}` : ''}
                     </div>
-                    {p.department && <div className="muted small">{p.department}</div>}
+                    {deptName(p.department) && (
+                      <div className="muted small">{deptName(p.department)}</div>
+                    )}
                     {cancelled && (
                       <div className="cancel-note">
                         Motivo: {p.cancel_reason || 'Sin comentario'}
@@ -1079,7 +1082,9 @@ export default function TripDetail() {
                       <span className="muted small">
                         C.I. {String(e.dni)}
                         {e.role_name ? ` · ${up(e.role_name)}` : ''}
-                        {e.department_name ? ` · ${up(e.department_name)}` : ''}
+                        {deptName(e.department_name)
+                          ? ` · ${up(deptName(e.department_name))}`
+                          : ''}
                       </span>
                     </span>
                     <button
@@ -1092,7 +1097,7 @@ export default function TripDetail() {
                           dni: String(e.dni),
                           phone: e.phone ?? null,
                           role_name: e.role_name ?? null,
-                          department: e.department_name ?? null,
+                          department: deptName(e.department_name) || null,
                           branch_id: e.branch_id ?? null,
                         })
                       }

@@ -27,8 +27,10 @@ PWA para administrar la flota de transporte particular: vehículos, choferes, su
      `trip_passenger_cancel.sql` (cancelar/sustituir pasajeros),
      `location_maps.sql` (enlace de Google Maps por ubicación),
      `locations_dedup.sql` (quita ubicaciones duplicadas por mayúsculas
-     y las pasa a mayúsculas) y `ride_requests.sql`
-     (solicitudes de traslado desde el link público /solicitud).
+     y las pasa a mayúsculas), `ride_requests.sql`
+     (solicitudes de traslado desde el link público /solicitud) y
+     `dept_normalize.sql` (unifica nombres viejos de departamento:
+     EQUIPO TI → TECNICO_TI).
 3. En **Authentication → Providers → Email**, desactiva "Confirm email" si quieres altas de usuario inmediatas.
 4. En **Authentication → Users → Add user**, crea tu usuario y contraseña.
 5. En **Project Settings → API**, copia la **Project URL** y la **anon key**.

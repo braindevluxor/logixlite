@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import { eachDay, localISO } from '../lib/dates'
+import { deptName } from '../lib/departments'
 import { useDateFilter } from '../date/DateFilterContext'
 import type { TripStatus } from '../lib/types'
 
@@ -505,7 +506,7 @@ export default function Dashboard() {
   const topDepts = useMemo(() => {
     const byDept = new Map<string, number>()
     for (const p of passengers) {
-      const key = p.department?.trim() || 'Sin departamento'
+      const key = deptName(p.department) || 'Sin departamento'
       byDept.set(key, (byDept.get(key) ?? 0) + 1)
     }
     const sorted = [...byDept.entries()]
@@ -526,7 +527,7 @@ export default function Dashboard() {
 
   const totalTraslados = passengers.length
   const totalDepts = useMemo(
-    () => new Set(passengers.map((p) => p.department?.trim() || 'Sin departamento')).size,
+    () => new Set(passengers.map((p) => deptName(p.department) || 'Sin departamento')).size,
     [passengers]
   )
 
@@ -630,7 +631,7 @@ export default function Dashboard() {
   const deptRows = useMemo(() => {
     if (!deptModal) return []
     const list = passengers.filter(
-      (p) => (p.department?.trim() || 'Sin departamento') === deptModal
+      (p) => (deptName(p.department) || 'Sin departamento') === deptModal
     )
     const tripById = new Map(trips.map((t) => [t.id, t]))
 
@@ -682,7 +683,7 @@ export default function Dashboard() {
       .filter((p) => pids.has(p.id))
       .map((p) => ({
         name: p.full_name,
-        dept: p.department ?? '—',
+        dept: deptName(p.department) || '—',
         at: tripById.get(p.trip_id)?.departure_at ?? null,
       }))
       .sort(

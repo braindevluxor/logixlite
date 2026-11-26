@@ -10,6 +10,7 @@ import {
 import { toPng } from 'html-to-image'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
+import { deptName } from '../lib/departments'
 import type { TripStatus } from '../lib/types'
 
 interface PlanPassenger {
@@ -370,7 +371,7 @@ export default function DayPlan() {
                         t.trip_passengers.map((p) => (
                           <div key={p.id} className="plan-row">
                             <span className="plan-name">{p.full_name}</span>
-                            <span>{p.department ?? '—'}</span>
+                            <span>{deptName(p.department) || '—'}</span>
                             <span>{destNames(t, p)}</span>
                             <span className="plan-time">
                               {fmtTime(t.departure_at)}

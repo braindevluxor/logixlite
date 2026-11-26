@@ -3,6 +3,7 @@ import { CircleCheck, MapPin, Plus, Send, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { up } from '../lib/format'
 import { employeeFullName, fetchEmployees } from '../lib/talentoHumano'
+import { deptName } from '../lib/departments'
 import { SOLICITUD_ORIGEN, type SolicitudRow } from '../lib/rideRequest'
 import type { ApiEmployee } from '../lib/types'
 
@@ -268,7 +269,9 @@ export default function RideRequest() {
                           <span className="sol-hint sol-hint-ok">
                             <CircleCheck size={12} />
                             {up(employeeFullName(found))}
-                            {found.department_name ? ` · ${up(found.department_name)}` : ''}
+                            {deptName(found.department_name)
+                              ? ` · ${up(deptName(found.department_name))}`
+                              : ''}
                             {found.phone ? ` · ${found.phone}` : ''}
                           </span>
                         ) : searching ? (
